@@ -1,7 +1,5 @@
 # Amazon_Electronic_Analysis
----
 **Group Members**: Hung Pham, Amy Do
----
 
 ## Project Overview
 This project analyzes Amazon digital device products (laptops, tablets, and phones) from 2018–2023 using both structured data (price, ratings) and unstructured data (customer reviews). It explores how price tiers relate to satisfaction, identifies common drivers of negative reviews, uncovers feature trade-offs in review text, and tracks how customer priorities changed before, during, and after COVID-19. The results are used to build an interpretable recommendation framework for evaluating products based on customer satisfaction patterns.
