@@ -40,9 +40,10 @@ OUTPUT_TABLE = f"{PROJECT_ID}.amazon_digital_devices_cleaned.eda_ready"
 # Default to local CSV — set USE_LOCAL_CSV=false to use BigQuery
 USE_LOCAL_CSV = os.environ.get("USE_LOCAL_CSV", "true").lower() != "false"
 
-LOCAL_INPUT_CSV  = os.path.join("dataset", "digital_devices_reviews_no_duplicates.csv")
-LOCAL_OUTPUT_CSV = os.path.join("dataset", "eda_ready.csv")
-
+# Absolute path 
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOCAL_INPUT_CSV  = os.path.join(PROJECT_ROOT, "dataset", "digital_devices_reviews_no_duplicates.csv")
+LOCAL_OUTPUT_CSV = os.path.join(PROJECT_ROOT, "dataset", "eda_ready.csv")
 
 
 #  Section 1: Load data
@@ -66,7 +67,6 @@ def load_reviews() -> pd.DataFrame:
 
     print(f"  Loaded {len(df):,} rows")
     return df
-
 
 
 #  Section 2: Basic cleaning
@@ -306,8 +306,6 @@ def translate_non_english(df: pd.DataFrame) -> pd.DataFrame:
 
 
 #  Section 7: Vader sentiment
-
-
 def add_vader_sentiment(df: pd.DataFrame) -> pd.DataFrame:
     vader = SentimentIntensityAnalyzer()
     df = df.copy()
@@ -319,11 +317,8 @@ def add_vader_sentiment(df: pd.DataFrame) -> pd.DataFrame:
 
 
 #  Section 8: Save results
-
-
 def save_results(df: pd.DataFrame) -> None:
     if USE_LOCAL_CSV:
-        os.makedirs("dataset", exist_ok=True)
         print(f"Saving {len(df):,} rows to {LOCAL_OUTPUT_CSV} …")
         df_out = df.copy()
         df_out["date"] = df_out["date"].astype(str)

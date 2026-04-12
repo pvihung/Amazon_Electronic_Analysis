@@ -4,3 +4,4 @@ pandas
 Flask
 gunicorn
 google-cloud-storage
+statsmodels

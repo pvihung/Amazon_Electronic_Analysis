@@ -2,15 +2,18 @@ import os
 
 import pandas as pd
 from dash import Input, Output, html
+import plotly.graph_objects as go
 
 from app.layout import (
     body_text, card, insight_note, one_col, props_table,
     research_box, section_heading, sub_section_heading, two_col,
 )
-from eda import category, correlation, overview, price, ratings, text, time as eda_time
+from eda import category, correlation, overview, price, ratings, text, hypothesis2, hypothesis1, time as eda_time
 
 # Data source config
-LOCAL_OUTPUT_CSV = os.path.join("dataset", "eda_ready.csv")
+# Use absolute path based on project root to work both locally and in production
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LOCAL_OUTPUT_CSV = os.path.join(PROJECT_ROOT, "dataset", "eda_ready.csv")
 USE_LOCAL_CSV = True
 
 _df_cache: dict = {}
@@ -58,6 +61,8 @@ def register_callbacks(app):
             return _render_dataset_page(df)
         if tab == "tab-analytics":
             return _render_analytics_page(df)
+        if tab == 'tab-hypothesis-results':
+            return _render_hypothesis_results_page(df)
 
         return html.Div("Unknown tab.")
 
@@ -218,7 +223,7 @@ def _render_analytics_page(df: pd.DataFrame):
             ),
         ),
 
-        # Rating Analysis 
+        # Rating Analysis
         card(
             sub_section_heading("⭐  Rating Analysis"),
             one_col(ratings.rating_distribution(df)),
@@ -253,7 +258,7 @@ def _render_analytics_page(df: pd.DataFrame):
             ),
         ),
 
-        # Time Analysis 
+        # Time Analysis
         card(
             sub_section_heading("📅  Time Analysis"),
             two_col(eda_time.reviews_by_year(df), eda_time.reviews_by_month(df)),
@@ -311,6 +316,118 @@ def _render_analytics_page(df: pd.DataFrame):
         ),
     ])
 
+def _render_hypothesis_results_page(df: pd.DataFrame):
+    h1        = hypothesis1.run_test(df)
+    h2_stats  = hypothesis2.get_summary_stats(df)
+    result_df = hypothesis2.run_test(df)
+
+    # ── Format result_df for go.Table (product-level) ─────────────────────────
+    display = result_df[["brand", "parent_asin", "dataset_reviews",
+                          "dataset_avg_rating", "average_rating",
+                          "gap", "t_stat", "p_value",
+                          "is_harsher", "is_lenient"]].copy()
+
+    display["dataset_avg_rating"] = display["dataset_avg_rating"].round(3)
+    display["average_rating"]     = display["average_rating"].round(3)
+    display["gap"]                = display["gap"].round(3)
+    display["t_stat"]             = display["t_stat"].round(3)
+    display["p_value"]            = display["p_value"].round(4)
+    display["verdict"] = display.apply(
+        lambda r: "Harsher" if r["is_harsher"] else ("Lenient" if r["is_lenient"] else "No diff"),
+        axis=1,
+    )
+    display = display.drop(columns=["is_harsher", "is_lenient"])
+
+    verdict_colors = {
+        "Harsher":  "#fde8e0",
+        "Lenient":  "#dce8f7",
+        "No diff":  "#ecf0f1",
+    }
+
+    data_table_fig = go.Figure(
+        go.Table(
+            header=dict(
+                values=["Brand", "Product ASIN", "Reviewer count",
+                        "Reviewer avg ★", "Platform avg ★",
+                        "Gap (Rev − Platform)", "t-stat", "p-value", "Verdict"],
+                fill_color="#2c3e50",
+                font=dict(color="white", size=12),
+                align="left",
+            ),
+            cells=dict(
+                values=[display[c] for c in display.columns],
+                fill_color=[
+                    [verdict_colors[v] for v in display["verdict"]]
+                    if col == "verdict" else "#ecf0f1"
+                    for col in display.columns
+                ],
+                font=dict(size=11),
+                align="left",
+            ),
+        ),
+        layout=dict(
+            title="Per-product One-sample t-test Results — Reviewer vs. Platform Average",
+            margin=dict(t=50, b=10, l=10, r=10),
+        ),
+    )
+
+    # ── Unpack two figures from get_plots ─────────────────────────────────────
+    fig_scatter, fig_gap = hypothesis2.get_plots(df)
+
+    return html.Div([
+        card(
+            section_heading("Hypothesis Results"),
+            body_text(
+                "This section summarizes statistical test results for the main hypotheses."
+            ),
+        ),
+
+        card(
+            sub_section_heading("Hypothesis 1: Rating distribution differs by verified purchase status."),
+            body_text(
+                "To assess whether verified purchase status is associated with rating behavior, "
+                "we compared the rating distributions of verified and non-verified reviews using "
+                "a Chi-square test of independence and a Mann-Whitney U test. Both results were "
+                "statistically significant, indicating that the two groups differ in rating "
+                "distribution, although the strength of the association is modest."
+            ),
+            one_col(hypothesis1.ecdf_chart(df)),
+            insight_note(
+                "The ECDF indicates that the rating distribution for verified purchases is "
+                "generally shifted toward higher ratings relative to non-verified purchases."
+            ),
+            two_col(hypothesis1.residual_heatmap(df), hypothesis1.adjusted_residual_heatmap(df)),
+            insight_note(
+                "Both the standardized and adjusted residual plots indicate that the rating "
+                "distribution differs by verified purchase status. The difference is not spread "
+                "evenly across all rating levels, but is driven mainly by an overrepresentation "
+                "of low ratings among non-verified reviews and an overrepresentation of 5-star "
+                "ratings among verified reviews."
+            ),
+        ),
+
+        card(
+            sub_section_heading("Hypothesis 2: Reviewers rate differently from the platform average."),
+            body_text(
+                "To evaluate whether text reviewers rate products differently from the broader platform average," 
+                "we compared each product’s reviewer mean rating with its published average rating using a one-sample t-test. "
+                "Products were then grouped according to whether reviewer ratings were significantly lower or higher than the platform average."
+            ),
+            html.Div(
+                style={"display": "grid", "gridTemplateColumns": "repeat(3, 1fr)",
+                       "gap": "16px", "marginBottom": "16px"},
+                children=[
+                    _stat_card(str(h2_stats["total_products"]),   "Products tested"),
+                    _stat_card(f"{h2_stats['harsher_pct']}%",     "% products harsher"),
+                    _stat_card(f"{h2_stats['lenient_pct']}%",     "% products lenient"),
+                ],
+            ),
+            one_col(fig_scatter),
+            insight_note("Text reviewers tend to rate products below the broader platform average."),
+            one_col(fig_gap),
+            insight_note("The downward bias is broad-based rather than driven by only a few outliers.")
+        ),
+    ])
 
 # Private helpers
 
