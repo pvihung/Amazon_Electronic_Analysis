@@ -407,7 +407,7 @@ def _render_hypothesis_results_page(df: pd.DataFrame):
         ),
 
         card(
-            sub_section_heading("Hypothesis 2: Reviewers rate differently from the platform average."),
+            sub_section_heading("Hypothesis 2: At the product level, does the mean rating of the reviews differ from the average rating displayed on the platform?."),
             body_text(
                 "To evaluate whether text reviewers rate products differently from the broader platform average," 
                 "we compared each product’s reviewer mean rating with its published average rating using a one-sample t-test. "
