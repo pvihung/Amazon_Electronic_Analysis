@@ -1,6 +1,0 @@
-dash
-plotly
-pandas
-Flask
-gunicorn
-google-cloud-storage
