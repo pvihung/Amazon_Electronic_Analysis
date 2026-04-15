@@ -123,7 +123,24 @@ def assign_price_tiers(df: pd.DataFrame) -> pd.DataFrame:
 
 
 
-#  Section 4: Device category classification
+#  Section 4: COVID period assignment
+
+def assign_covid_period(df: pd.DataFrame) -> pd.DataFrame:
+    def _label(date):
+        if pd.isna(date):
+            return "unknown"
+        if date < pd.Timestamp("2020-03-01"):
+            return "pre-COVID"
+        if date < pd.Timestamp("2021-07-01"):
+            return "during-COVID"
+        return "post-COVID"
+
+    df = df.copy()
+    df["covid_period"] = df["date"].apply(_label)
+    return df
+
+
+#  Section 5: Device category classification
 
 # Products manually verified as belonging to a different category than
 # the regex classifier predicts. Loaded here so they're easy to update.
@@ -303,10 +320,7 @@ def translate_non_english(df: pd.DataFrame) -> pd.DataFrame:
 
     return df
 
-
-
 #  Section 7: Vader sentiment
-
 
 def add_vader_sentiment(df: pd.DataFrame) -> pd.DataFrame:
     vader = SentimentIntensityAnalyzer()
@@ -318,8 +332,19 @@ def add_vader_sentiment(df: pd.DataFrame) -> pd.DataFrame:
 
 
 
-#  Section 8: Save results
+#  Section 8: Tradeoff flag
 
+CONTRAST_PATTERN = r"\b(but|however|although|though|despite|unfortunately|except|yet|still|while|whereas)\b"
+
+def add_tradeoff_flag(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df["has_tradeoff"] = df["review_text"].astype(str).str.contains(
+        CONTRAST_PATTERN, case=False, regex=True
+    ).astype(int)
+    return df
+
+
+#  Section 9: Save results
 
 def save_results(df: pd.DataFrame) -> None:
     if USE_LOCAL_CSV:
@@ -355,10 +380,12 @@ def run() -> None:
     df = load_reviews()
     df = basic_clean(df)
     df = assign_price_tiers(df)
+    df = assign_covid_period(df)
     df = classify_categories(df)
     df = extract_brands(df)
     df = translate_non_english(df)
     df = add_vader_sentiment(df)
+    df = add_tradeoff_flag(df)
 
     save_results(df)
     print("Step 3 complete.\n")
