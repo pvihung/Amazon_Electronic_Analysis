@@ -73,15 +73,10 @@ def build_layout() -> html.Div:
             ),
 
             # Page content
-            dcc.Loading(
-                id="tab-content-spinner",
-                type="default",
-                color=PRIMARY,
-                children=html.Div(
-                    id="tab-content",
-                    style={"maxWidth": "1100px", "margin": "0 auto",
-                           "padding": "40px 32px 60px"},
-                ),
+            html.Div(
+                id="tab-content",
+                style={"maxWidth": "1100px", "margin": "0 auto",
+                       "padding": "40px 32px 60px"},
             ),
 
         ],
@@ -160,16 +155,15 @@ def research_box(*children) -> html.Div:
 def insight_note(text: str) -> html.Div:
     """Inline analytical note (amber highlight)."""
     return html.Div(
-        f"💡 {text}",
+        f"📝 {text}",
         style={
             "backgroundColor": "#fef9e7",
-            # "border": "1px solid #f39c12",
             "borderRadius": "5px",
             "padding": "8px 14px",
-            "fontSize": "0.88rem",
+            "fontSize": "0.94rem",
             "color": "#6e4c00",
             "fontFamily": "Segoe UI, Arial, sans-serif",
-            "marginTop": "0px",
+            "marginTop": "-6px",
             "marginBottom": "16px",
         },
     )
