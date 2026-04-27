@@ -373,9 +373,9 @@ def save_results(df: pd.DataFrame) -> None:
 
 def run() -> None:
     mode = "LOCAL CSV" if USE_LOCAL_CSV else "BIGQUERY"
-    print("=" * 60)
+    
     print(f"STEP 3 — EDA Data Preparation  [{mode}]")
-    print("=" * 60)
+
 
     df = load_reviews()
     df = basic_clean(df)

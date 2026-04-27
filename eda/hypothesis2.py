@@ -1,176 +1,165 @@
 """
-Hypothesis 2: COVID-19 shifted consumer priorities for digital devices.
-All figures use Plotly and follow the app color palette.
+Hypothesis 2 — Rating distribution differs by verified purchase status
+Format
+run_test(df) ->  all stats, tables, residuals
+ecdf_chart(df)  ->  ECDF by group
+residual_heatmap(df) ->  standardised residuals heatmap
+adjusted_residual_heatmap(df)  ->  adjusted residuals heatmap
 """
 
+import numpy as np
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+from scipy.stats import chi2_contingency, mannwhitneyu
 
-PERIOD_ORDER = ["pre-COVID", "during-COVID", "post-COVID"]
-PERIOD_COLORS = {"pre-COVID": "#F4A261", "during-COVID": "#E76F51", "post-COVID": "#C1440E"}
-
-COVID_KEYWORDS = {
-    "webcam":          r"\bwebcam\b",
-    "zoom/video call": r"\b(?:zoom|teams|meet|video\s+call|video\s+conference)\b",
-    "battery life":    r"\bbatter(?:y\s+life|y\s+drain)\b",
-    "work from home":  r"\b(?:work\s+from\s+home|wfh|remote\s+work)\b",
-    "display/screen":  r"\b(?:screen|display|monitor)\b",
-    "speaker":         r"\bspeaker\b",
-    "keyboard":        r"\bkeyboard\b",
-    "performance":     r"\b(?:performance|fast|slow|lag)\b",
-    "price/value":     r"\b(?:price|value|worth|expensive|cheap)\b",
-    "delivery":        r"\b(?:shipping|delivery|arrived|package)\b",
-}
+ALPHA = 0.05
 
 
-def _covid_df(df: pd.DataFrame) -> pd.DataFrame:
-    return df[df["covid_period"].isin(PERIOD_ORDER)].copy()
+def _prepare(df: pd.DataFrame) -> pd.DataFrame:
+    d = df.copy()
+    d["group"]    = d["verified_purchase"].map({True: "Verified", False: "Non-verified"})
+    d["is_5_star"] = (d["rating"] == 5).astype(int)
+    return d
 
 
-def compute_keyword_matches(dc: pd.DataFrame) -> pd.DataFrame:
-    """Return a boolean DataFrame (one column per keyword) for the covid-period subset.
+def run_test(df: pd.DataFrame) -> dict:
+    d = _prepare(df)
 
-    Pass the result to keyword_mention_rate_chart / keyword_lift_chart to avoid
-    re-running the same regexes multiple times on the full text column.
-    """
-    text_col = dc["review_text"].astype(str)
-    return pd.DataFrame(
-        {kw: text_col.str.contains(pat, case=False, regex=True)
-         for kw, pat in COVID_KEYWORDS.items()},
-        index=dc.index,
+    # Summary stats
+    summary = d.groupby("group").agg(
+        n_reviews     = ("rating", "size"),
+        mean_rating   = ("rating", "mean"),
+        median_rating = ("rating", "median"),
+        pct_5_star    = ("is_5_star", lambda x: x.mean() * 100),
+    ).round(3).reset_index()
+
+    # Contingency tables
+    count_tab = pd.crosstab(d["group"], d["rating"])
+    prop_tab  = pd.crosstab(d["group"], d["rating"], normalize="index").mul(100).round(2)
+
+    # Chi-square test
+    chi2, p, dof, expected_arr = chi2_contingency(count_tab)
+    expected_df = pd.DataFrame(expected_arr, index=count_tab.index, columns=count_tab.columns)
+    std_resid   = (count_tab - expected_df) / np.sqrt(expected_df)
+
+    n         = count_tab.to_numpy().sum()
+    r, c      = count_tab.shape
+    cramers_v = np.sqrt((chi2 / n) / min(r - 1, c - 1))
+
+    # Adjusted standardised residuals (Agresti 2002)
+    row_totals = count_tab.sum(axis=1)
+    col_totals = count_tab.sum(axis=0)
+    expected_outer = np.outer(row_totals, col_totals) / n
+    adj_resid = (count_tab - expected_outer) / np.sqrt(
+        expected_outer
+        * (1 - row_totals.values[:, None] / n)
+        * (1 - col_totals.values[None, :] / n)
     )
 
-
-def period_overview_chart(df: pd.DataFrame) -> go.Figure:
-    """Side-by-side: review counts + mean ratings by COVID period."""
-    dc = _covid_df(df)
-    counts = dc.groupby("covid_period").size().reindex(PERIOD_ORDER).reset_index(name="count")
-    ratings = dc.groupby("covid_period")["rating"].mean().reindex(PERIOD_ORDER).reset_index()
-
-    fig = make_subplots(
-        rows=1, cols=2,
-        subplot_titles=("Review Counts by Period", "Mean Star Rating by Period"),
+    # Mann-Whitney U
+    mw_stat, mw_p = mannwhitneyu(
+        d[d["group"] == "Verified"]["rating"],
+        d[d["group"] == "Non-verified"]["rating"],
+        alternative="two-sided",
     )
 
-    colors = [PERIOD_COLORS[p] for p in PERIOD_ORDER]
-
-    fig.add_trace(go.Bar(
-        x=counts["covid_period"], y=counts["count"],
-        marker_color=colors, showlegend=False,
-        text=counts["count"].apply(lambda v: f"{v:,}"),
-        textposition="outside",
-    ), row=1, col=1)
-
-    fig.add_trace(go.Bar(
-        x=ratings["covid_period"], y=ratings["rating"].round(3),
-        marker_color=colors, showlegend=False,
-        text=ratings["rating"].round(3),
-        textposition="outside",
-    ), row=1, col=2)
-
-    fig.update_yaxes(title_text="Number of Reviews", range=[0, 155000], row=1, col=1)
-    fig.update_yaxes(title_text="Mean Rating", range=[3.5, 4.15], row=1, col=2)
-    fig.update_layout(height=420, margin=dict(t=60))
-    return fig
+    return {
+        "summary":        summary,
+        "count_tab":      count_tab,
+        "prop_tab":       prop_tab,
+        "chi2":           round(chi2, 2),
+        "dof":            int(dof),
+        "p_value":        p,
+        "cramers_v":      round(cramers_v, 4),
+        "conclusion":     "Reject H0" if p < ALPHA else "Fail to reject H0",
+        "std_resid":      std_resid,
+        "adj_resid":      adj_resid,
+        "mann_whitney_u": round(mw_stat, 2),
+        "mann_whitney_p": mw_p,
+    }
 
 
-def keyword_mention_rate_chart(df: pd.DataFrame, kw_matches: pd.DataFrame = None) -> go.Figure:
-    """Grouped bar: keyword mention rate (%) by COVID period.
-
-    Pass ``kw_matches`` (from :func:`compute_keyword_matches`) to skip re-running regexes.
-    """
-    dc = _covid_df(df)
-    if kw_matches is None:
-        kw_matches = compute_keyword_matches(dc)
-
-    records = []
-    for kw in COVID_KEYWORDS:
-        col = kw_matches[kw]
-        for period in PERIOD_ORDER:
-            mask = dc["covid_period"] == period
-            rate = col[mask].mean() * 100
-            records.append({"keyword": kw, "period": period, "rate_pct": round(rate, 3)})
-
-    kw_df = pd.DataFrame(records)
-
-    fig = px.bar(
-        kw_df, x="keyword", y="rate_pct", color="period",
-        barmode="group",
-        category_orders={"period": PERIOD_ORDER},
-        color_discrete_map=PERIOD_COLORS,
-        title="Keyword Mention Rate (%) by COVID Period",
-        labels={"rate_pct": "Mention Rate (%)", "keyword": "", "period": "Period"},
-    )
-    fig.update_layout(height=440, xaxis_tickangle=30, legend=dict(title="Period"))
-    return fig
-
-
-def keyword_lift_chart(df: pd.DataFrame, kw_matches: pd.DataFrame = None) -> go.Figure:
-    """Horizontal bar: keyword lift during-COVID vs pre-COVID (%).
-
-    Pass ``kw_matches`` (from :func:`compute_keyword_matches`) to skip re-running regexes.
-    """
-    dc = _covid_df(df)
-    if kw_matches is None:
-        kw_matches = compute_keyword_matches(dc)
-
-    rows = {}
-    for kw in COVID_KEYWORDS:
-        col = kw_matches[kw]
-        pre    = col[dc["covid_period"] == "pre-COVID"].mean() * 100
-        during = col[dc["covid_period"] == "during-COVID"].mean() * 100
-        lift   = round((during - pre) / (pre + 1e-9) * 100, 1)
-        rows[kw] = lift
-
-    lift_s = pd.Series(rows).sort_values()
-    colors = ["#e74c3c" if v < 0 else "#2ecc71" for v in lift_s]
-
-    fig = go.Figure(go.Bar(
-        x=lift_s.values, y=lift_s.index,
-        orientation="h",
-        marker_color=colors,
-    ))
-    fig.add_vline(x=0, line_width=1, line_color="#555")
-    fig.update_layout(
-        title="Keyword Lift: During-COVID vs Pre-COVID (%)",
-        xaxis_title="Relative change (%)",
-        yaxis_title="",
-        height=420,
-        margin=dict(t=60),
-    )
-    return fig
-
-
-def category_share_chart(df: pd.DataFrame) -> go.Figure:
-    """Stacked bar: device category share (%) by COVID period."""
-    dc = _covid_df(df)
-    cat_period = (
-        pd.crosstab(dc["covid_period"], dc["category"], normalize="index") * 100
-    ).reindex(PERIOD_ORDER).reset_index()
-
-    cats = [c for c in cat_period.columns if c != "covid_period"]
-    cat_colors = {"laptop": "#e67e22", "desktop": "#2ecc71", "tablet": "#7FAAC4"}
+def ecdf_chart(df: pd.DataFrame) -> go.Figure:
+    d      = _prepare(df)
+    colors = {"Verified": "#1f77b4", "Non-verified": "#ff7f0e"}
 
     fig = go.Figure()
-    for cat in cats:
-        fig.add_trace(go.Bar(
-            x=cat_period["covid_period"],
-            y=cat_period[cat].round(1),
-            name=cat,
-            marker_color=cat_colors.get(cat, "#999"),
-            text=cat_period[cat].round(1).astype(str) + "%",
-            textposition="inside",
+    for group, gdf in d.groupby("group"):
+        sorted_ratings = gdf["rating"].sort_values()
+        ecdf           = np.arange(1, len(sorted_ratings) + 1) / len(sorted_ratings)
+        fig.add_trace(go.Scatter(
+            x    = sorted_ratings,
+            y    = ecdf,
+            mode = "lines",
+            name = group,
+            line = dict(color=colors.get(group, "#888780"), width=2),
+            hovertemplate = f"<b>{group}</b><br>Rating: %{{x}}★<br>Cumulative: %{{y:.2%}}<extra></extra>",
         ))
 
     fig.update_layout(
-        barmode="stack",
-        title="Device Category Share (%) by COVID Period",
-        xaxis_title="",
-        yaxis_title="Share (%)",
-        height=420,
-        legend_title="Category",
-        margin=dict(t=60),
+        title         = "ECDF of Ratings by Verified Purchase Status",
+        xaxis_title   = "Rating (stars)",
+        yaxis_title   = "Cumulative proportion",
+        legend_title  = "",
+        plot_bgcolor  = "white",
+        paper_bgcolor = "white",
+        xaxis         = dict(showgrid=True, gridcolor="rgba(0,0,0,0.08)"),
+        yaxis         = dict(showgrid=True, gridcolor="rgba(0,0,0,0.08)"),
+        margin        = dict(t=60, b=40, l=40, r=20),
+    )
+    return fig
+
+
+def residual_heatmap(df: pd.DataFrame) -> go.Figure:
+    std_resid = run_test(df)["std_resid"]
+
+    fig = go.Figure(go.Heatmap(
+        z             = std_resid.values,
+        x             = [str(c) for c in std_resid.columns],
+        y             = std_resid.index.tolist(),
+        colorscale    = "RdBu",
+        zmid          = 0,
+        text          = std_resid.round(2).values,
+        texttemplate  = "%{text}",
+        hovertemplate = "Group: %{y}<br>Rating: %{x}★<br>Std. residual: %{z:.2f}<extra></extra>",
+        colorbar      = dict(title="Std. residual"),
+    ))
+    fig.update_layout(
+        title         = "Standardised Residuals from Chi-square Test",
+        xaxis_title   = "Rating (stars)",
+        yaxis_title   = "",
+        plot_bgcolor  = "white",
+        paper_bgcolor = "white",
+        margin        = dict(t=60, b=60, l=120, r=20),
+        annotations   = [dict(
+            x=0.5, y=-0.25, xref="paper", yref="paper",
+            text="abs(value) > 2 means the cell contributes notably to the difference",
+            showarrow=False, font=dict(size=11, color="#555"),
+        )],
+    )
+    return fig
+
+
+def adjusted_residual_heatmap(df: pd.DataFrame) -> go.Figure:
+    adj_resid = run_test(df)["adj_resid"]
+
+    fig = go.Figure(go.Heatmap(
+        z             = adj_resid.values,
+        x             = [str(c) for c in adj_resid.columns],
+        y             = adj_resid.index.tolist(),
+        colorscale    = "RdBu",
+        zmid          = 0,
+        text          = adj_resid.round(2).values,
+        texttemplate  = "%{text}",
+        hovertemplate = "Group: %{y}<br>Rating: %{x}★<br>Adj. residual: %{z:.2f}<extra></extra>",
+        colorbar      = dict(title="Z-score"),
+    ))
+    fig.update_layout(
+        title         = "Adjusted Residuals: Where the bias actually lies",
+        xaxis_title   = "Rating (stars)",
+        yaxis_title   = "",
+        plot_bgcolor  = "white",
+        paper_bgcolor = "white",
+        margin        = dict(t=60, b=60, l=120, r=20),
     )
     return fig
