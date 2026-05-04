@@ -6,12 +6,5 @@ google-cloud-bigquery-storage==2.25.0
 pyarrow==18.1.0
 scikit-learn==1.6.1
 joblib==1.4.2
-nltk==3.8.1
-textblob==0.18.0
-langdetect==1.0.9
-lingua-language-detector==2.2.0
-deep-translator==1.11.4
-transformers==4.47.1
-sentencepiece==0.2.1
 plotly==5.22.0
 statsmodels==0.14.6

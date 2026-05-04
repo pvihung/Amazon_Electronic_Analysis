@@ -4,7 +4,7 @@ from dash import dcc, html
 from app.layout import body_text, card, section_heading
 
 
-def render(_df: pd.DataFrame) -> html.Div:
+def render(_df: pd.DataFrame, initial_sub_tab: str = "sub-eda") -> html.Div:
     # Sub-tab children are intentionally empty here — content is injected lazily
     # by the render_sub_tab callback in callbacks.py, so only the selected tab is computed.
     return html.Div([
@@ -22,7 +22,7 @@ def render(_df: pd.DataFrame) -> html.Div:
             children=[
                 dcc.Tabs(
                     id="analysis-sub-tabs",
-                    value="sub-eda",
+                    value=initial_sub_tab,
                     children=[
                         _sub_tab("sub-eda",  "EDA"),
                         _sub_tab("sub-hyp1", "Hypothesis 1"),
@@ -35,6 +35,7 @@ def render(_df: pd.DataFrame) -> html.Div:
                 dcc.Loading(
                     type="circle",
                     color="#34527A",
+                    delay_show=300,
                     children=html.Div(id="analysis-sub-content"),
                 ),
             ],

@@ -18,6 +18,8 @@ def build_layout() -> html.Div:
         style={"fontFamily": "Georgia, 'Times New Roman', serif",
                "backgroundColor": PAGE_BG, "minHeight": "100vh"},
         children=[
+            dcc.Location(id="url", refresh=False),
+
             # ── Hero ────────────────────────────────────────────────────────
             html.Div(
                 style={

@@ -6,7 +6,7 @@ Run locally:
 import os
 import dash
 from app.layout import build_layout
-from app.callbacks import register_callbacks
+from app.callbacks import register_callbacks, start_background_warmup
 
 # App init
 app = dash.Dash(
@@ -37,6 +37,7 @@ app.index_string = """<!DOCTYPE html>
 
 app.layout = build_layout()
 register_callbacks(app)
+start_background_warmup()
 
 # Local dev server 
 if __name__ == "__main__":

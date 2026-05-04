@@ -1,0 +1,13 @@
+runtime: python311
+
+instance_class: F4_1G
+
+env_variables:
+  DEBUG: "false"
+  GCS_BUCKET_NAME: "cs163-amazon-review-analysis-data"
+
+automatic_scaling:
+  min_instances: 0
+  max_instances: 1
+
+entrypoint: gunicorn -b :$PORT app.main:server
