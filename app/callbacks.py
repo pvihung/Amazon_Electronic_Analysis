@@ -9,6 +9,7 @@ from app.pages import dataset, methods, overview
 from app.pages.analytics import eda, hypothesis1, hypothesis2, hypothesis3
 from app.pages.analytics import analytics as analytics_page
 
+
 _bucket = os.environ.get("GCS_BUCKET_NAME", "cs163-amazon-review-analysis-data")
 GCS_PARQUET_URL = f"https://storage.googleapis.com/{_bucket}/eda_ready.parquet"
 
@@ -19,6 +20,7 @@ _PATH_FROM_MAIN_TAB = {
     "tab-overview":  "/overview",
     "tab-dataset":   "/dataset",
     "tab-methods":   "/methods",
+    "tab-models":    "/models",
     "tab-analytics": "/analysis/eda",
 }
 
@@ -27,6 +29,8 @@ _PATH_FROM_SUB_TAB = {
     "sub-hyp1": "/analysis/hypothesis1",
     "sub-hyp2": "/analysis/hypothesis2",
     "sub-hyp3": "/analysis/hypothesis3",
+    "sub-models-data_overview": "/models/models-comparison",
+    "sub-models-models-detail": "/models/models-detail",
 }
 
 _SUB_TAB_FROM_SLUG = {
@@ -36,6 +40,10 @@ _SUB_TAB_FROM_SLUG = {
     "hypothesis3": "sub-hyp3",
 }
 
+_MODELS_SUB_TAB_FROM_SLUG = {
+    "models-data-overview": "sub-models-data_overview",
+    "models-detail": "sub-models-models-detail",
+}
 
 def _main_tab(pathname: str) -> str:
     if not pathname or pathname in ("/", "/overview"):
@@ -46,6 +54,8 @@ def _main_tab(pathname: str) -> str:
         return "tab-methods"
     if pathname.startswith("/analysis"):
         return "tab-analytics"
+    if pathname.startswith("/models"):
+        return "tab-models"
     return "tab-overview"
 
 
@@ -55,6 +65,11 @@ def _sub_tab(pathname: str) -> str:
         return _SUB_TAB_FROM_SLUG.get(slug, "sub-eda")
     return "sub-eda"
 
+def _sub_tab_models(pathname: str) -> str:
+    if pathname and pathname.startswith("/models/"):
+        slug = pathname.split("/models/", 1)[-1].strip("/")
+        return _MODELS_SUB_TAB_FROM_SLUG.get(slug, "sub-models-data_overview")
+    return "sub-models-data_overview"
 
 def _load_data() -> pd.DataFrame:
     if "df" not in _df_cache:
@@ -141,6 +156,30 @@ def register_callbacks(app):
             raise PreventUpdate
         return new_sub_tab
 
+    @app.callback(
+        Output("url", "pathname", allow_duplicate=True),
+        Input("models-sub-tabs", "value"),
+        prevent_initial_call="initial_duplicate",
+    )
+    def sync_url_from_models_sub_tab(sub_tab):
+        return _PATH_FROM_SUB_TAB.get(sub_tab, "/models/models-comparison")
+
+
+    @app.callback(
+        Output("models-sub-tabs", "value"),
+        Input("url", "pathname"),
+        State("models-sub-tabs", "value"),
+        prevent_initial_call=True,
+    )
+
+    def sync_models_sub_tab_from_url(pathname, current_sub_tab):
+        if not pathname or not pathname.startswith("/models/"):
+            raise PreventUpdate
+        new_sub_tab = _sub_tab_models(pathname)
+        if new_sub_tab == current_sub_tab:
+            raise PreventUpdate
+        return new_sub_tab
+
     # Render main page content
     @app.callback(
         Output("tab-content", "children"),
@@ -152,6 +191,9 @@ def register_callbacks(app):
             return overview.render()
         if tab == "tab-methods":
             return methods.render()
+        if tab == "tab-models":
+            from app.pages import models
+            return models.render(_sub_tab_models(pathname or ""))
 
         try:
             df = _load_data()
@@ -197,3 +239,18 @@ def register_callbacks(app):
 
         _sub_tab_cache[sub_tab] = content
         return content
+
+    @app.callback(
+        Output("models-sub-content", "children"),
+        Input("models-sub-tabs", "value"),
+
+    )
+    def render_models_sub_tab(sub_tab):
+        if sub_tab == "sub-models-data_overview":
+            from app.pages.models import data_overview
+            return data_overview.render()
+        elif sub_tab == "sub-models-models-detail":
+            from app.pages.models import models_detail
+            return models_detail.render()
+        else:
+            return html.Div("Unknown tab.")

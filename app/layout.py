@@ -63,6 +63,7 @@ def build_layout() -> html.Div:
                             _nav_tab("tab-dataset",   "DATASET"),
                             _nav_tab("tab-methods",   "METHODS"),
                             _nav_tab("tab-analytics", "ANALYTICS"),
+                            _nav_tab("tab-models", "MODELS"),
                         ],
                         style={"border": "none", "maxWidth": "1100px", "margin": "0 auto"},
                         colors={
