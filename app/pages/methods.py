@@ -124,19 +124,15 @@ def render() -> html.Div:
 
 def _pipeline_overview() -> html.Div:
     return card(
-        section_heading("The Digital Device Classification Pipeline"),
+        section_heading("Product Aspect Extraction"),
         body_text(
-            "The Classification pipeline improves the earlier modeling workflow by separating "
-            "model development from final evaluation. A 15% global test set is held out at the "
-            "beginning and is not used during training, validation, threshold tuning, or early "
-            "stopping."
-        
+            "This pipeline extracts product-aspect signals from review sentences and define the reviewed aspects as positive or negative. "
+            "Pipeline architecture:"
         ),
         html.Div([
-            _mini_point("Leakage prevention", "Validation sets are used for model selection and threshold tuning; test sets are used only for final evaluation."),
-            _mini_point("Stratified splitting", "Splits preserve label balance for is_related and is_technical so the evaluation is less biased."),
-            _mini_point("Stage-specific training", "Each model is trained only on the subset it would realistically receive in the deployed pipeline."),
-            _mini_point("Cascaded evaluation", "The final evaluation passes predictions from Stage 1 to Stage 2 to Stage 3, matching the real dashboard workflow."),
+            _mini_point("Domain-Adaptive Pretraining (DAPT)", "Before fine-tuning, we further pretrained the language models on a large corpus of Amazon review sentences. This helps the models better understand the specific language and style used in customer reviews."),
+            _mini_point("Model 1: Mult-task Aspect Detector", "This model classifies whether a sentence is unrelated, general opinion, or technical content before defining the main aspect(s) in the sentence."),
+            _mini_point("Model 2: Aspect Sentiment Classification", "For sentences that contain technical content, a second model classifies the sentiment of each aspect mentioned as positive or negative."),
         ], style={"marginTop": "16px"}),
     )
 
