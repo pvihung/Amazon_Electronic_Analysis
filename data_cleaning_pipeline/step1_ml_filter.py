@@ -17,12 +17,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
 # Config 
-PROJECT_ID      = os.environ.get("GCP_PROJECT", "cs163-project-487801")
+PROJECT_ID      = os.environ.get("GCP_PROJECT", "cs163-amazon-analysis")
 TRAIN_TABLE     = f"{PROJECT_ID}.amazon_electronics.ml_sample2"
 METADATA_TABLE  = f"{PROJECT_ID}.amazon_electronics.meta_Electronics"
 OUTPUT_TABLE    = f"{PROJECT_ID}.amazon_digital_devices_cleaned.metadata_digital_device_result"
 MODEL_PATH      = "pipeline/digital_device_model.joblib"
-PRED_THRESHOLD  = 0.799          # 80 % confidence to reduce noise
+PRED_THRESHOLD  = 0.7         # 70 % confidence to reduce noise
 METADATA_CATEGORIES = (
     "Computers", "All Electronics", "Amazon Devices", "Office Products"
 )

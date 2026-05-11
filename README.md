@@ -40,15 +40,15 @@ python -m pipeline.run_pipeline --steps 2 3  # specific steps only
 
 ---
 
-## Pipeline Overview
+## Data Cleaning Pipeline Overview
 
 ```
-Raw Amazon Electronics Data
+Amazon Electronics Data + Metadata
         │
         ▼
 [Step 1] ML Filter (pipeline/step1_ml_filter.py)
   TF-IDF + Logistic Regression classifies product titles
-  as digital devices or not; results written back to BigQuery.
+  as digital devices or not.
         │
         ▼
 [Step 2] BigQuery SQL (pipeline/step2_bq_queries.py)
@@ -111,32 +111,36 @@ Amazon_Electronic_Analysis/
 │       ├── overview.py        # Project overview and research questions
 │       ├── dataset.py         # Dataset description page
 │       ├── methods.py         # Methods and pipeline explanation
-│       └── models/            # ABSA model pages and live demo
+│       ├── models/            # ABSA model pages and live demo
+│       └── analytics/
+│            ├── EDA           # EDA and Major findings
+│            ├── Hypothesis 1  
+│            ├── Hypothesis 2
+│            └── Hypothesis 2        
+│       
 │
-├── eda/               # EDA visualization modules (used by the Dash app)
+├── eda/                                            # EDA visualization modules (used by the Dash app)
 │   ├── overview.py, category.py, ratings.py, price.py, time.py
 │   ├── text.py, correlation.py, covid.py
 │   └── hypothesis1.py, hypothesis2.py, hypothesis3.py
 │
-├── dataset/           # Local CSV data files (intermediate pipeline outputs)
+├── dataset/                                        # Local CSV data files ()
+│   ├── electronics.csv metadata.csv                # Original dataset from Hugging Face
 │   ├── digital_devices_reviews_no_duplicates.csv   # Post-Step-2 deduplicated data
 │   ├── eda_ready.csv                               # Post-Step-3 feature-engineered data
 │   └── final.csv
 │
-├── sql/               # BigQuery SQL scripts
-│   ├── link_reviews_products.sql     # Joins reviews with product metadata
-│   └── duplicate_and_null_handling.sql
 │
-├── models/            # Supplementary model utilities
+├── models/                                         # Supplementary model utilities
 │   └── labeled_data_overview.py
 │
-├── notebooks/         # Exploratory Jupyter notebooks
-│   ├── EDA.ipynb
-│   ├── Amy_hypothesis.ipynb
+├── notebooks/                                      # All Jupyter notebooks that we used to
+│   ├── absa_pipeline_v6.ipynb                      # Aspect-Based Sentiment Analysis (ABSA) pipeline
+│   ├── hypothesis.ipynb
 │   └── MLpipeline_filtering_metadata.ipynb
 │
-├── app.yaml           # Google App Engine deployment configuration
-└── requirements.txt   # Python dependencies for the web app
+├── app.yaml                                        # Google App Engine deployment configuration
+└── requirements.txt                                # Python dependencies for the web app
 ```
 
 ---
@@ -144,7 +148,80 @@ Amazon_Electronic_Analysis/
 ## System Design
 
 ```
-                        SYSTEM DESIGN DIAGRAM GOES HERE
+┌──────────────────────────────────────────────────────────────────────┐
+│                   Amazon Electronics Dataset                         │
+│               (HuggingFace — reviews + product metadata)             │
+└──────────────────────────────┬───────────────────────────────────────┘
+                               │
+                               ▼
+            ╔═════════════════════════════════════════╗
+            ║              DATA PIPELINE              ║
+            ║                                         ║
+            ║  ┌──────────────────────────────────┐   ║
+            ║  │ Step 1 · ML Filter               │   ║
+            ║  │ TF-IDF + Logistic Regression     │   ║
+            ║  │ identifies digital device titles │   ║
+            ║  └─────────────────┬────────────────┘   ║
+            ║                    │                    ║
+            ║  ┌─────────────────▼────────────────┐   ║
+            ║  │ Step 2 · BigQuery SQL            │   ║
+            ║  │ Join reviews ↔ product metadata  │   ║
+            ║  │ Deduplicate rows                 │   ║
+            ║  └─────────────────┬────────────────┘   ║
+            ║                    │                    ║
+            ║  ┌─────────────────▼────────────────┐   ║
+            ║  │ Step 3 · EDA Data Prep           │   ║
+            ║  │ VADER sentiment · brand extract  │   ║
+            ║  │ translations · price tiers       │   ║
+            ║  └─────────────────┬────────────────┘   ║
+            ╚════════════════════╪════════════════════╝
+                                 │
+                     ┌───────────┴───────────┐
+                     ▼                       ▼
+              ┌─────────────┐        ┌──────────────┐
+              │  BigQuery   │        │     GCS      │
+              │  (tables)   │        │   (bucket)   │
+              └──────┬──────┘        └──────────────┘
+                     │
+       ┌─────────────┘
+       │
+       │    ┌────────────────────────────────────────┐
+       │    │     ABSA Training  (Google Colab)      │
+       │    │                                        │
+       │    │  DAPT pre-training → RoBERTa backbone  │
+       │    │            ↓                           │
+       │    │  M1 · RoBERTa + LoRA (multitask)       │
+       │    │      aspect detection per category     │
+       │    │            ↓                           │
+       │    │  M2 · DeBERTa (sentiment classifier)   │
+       │    │      positive / negative per aspect    │
+       │    └────────────────────┬───────────────────┘
+       │                         │
+       │                         ▼
+       │         ┌───────────────────────────────┐
+       │         │     ABSA Inference API        │
+       │         │     FastAPI · Docker          │
+       │         │     Google Cloud Run          │
+       │         │                               │
+       │         │   GET  /health                │
+       │         │   POST /predict               │
+       │         │   POST /predict/batch         │
+       │         └───────────────┬───────────────┘
+       │                         │ HTTP REST
+       │                         ▼
+       │         ┌───────────────────────────────┐
+       └────────▶│       Dash Web App            │
+                 │     Google App Engine         │
+                 │                               │
+                 │  Overview · Dataset · EDA     │
+                 │  Hypothesis · ABSA Live Demo  │
+                 └───────────────┬───────────────┘
+                                 │
+                                 ▼
+                           ┌──────────┐
+                           │   User   │
+                           │ Browser  │
+                           └──────────┘
 ```
 
 **Scalability:**
@@ -166,10 +243,13 @@ The inference service lives in `absa-api/` and is packaged as a Docker container
 
 ```
 absa-api/
-├── dapt_roberta/          ← download from Drive
-├── model1_multitask/      ← download from Drive
-├── model2_sentiment/      ← download from Drive
+├── dapt_roberta/          ← download from [Drive]
+├── model1_multitask/      ← download from [Drive]
+├── model2_sentiment/      ← download from [Drive]
 ├── app/
+├── ├──main.py
+├── ├──models.py
+├── └──schemas.py 
 ├── Dockerfile
 └── requirements.txt
 ```
@@ -207,14 +287,14 @@ curl -X POST http://localhost:8080/predict \
 ```bash
 # Authenticate and set project
 gcloud auth login
-gcloud config set project cs163-project-487801
+gcloud config set project cs163-amazon-analysis
 
 # Build and push to Google Container Registry
-gcloud builds submit --tag gcr.io/cs163-project-487801/absa-api .
+gcloud builds submit --tag gcr.io/cs163-amazon-analysis/absa-api .
 
 # Deploy
 gcloud run deploy absa-api \
-  --image gcr.io/cs163-project-487801/absa-api \
+  --image gcr.io/cs163-amazon-analysis/absa-api \
   --platform managed \
   --region us-central1 \
   --memory 4Gi \
@@ -253,7 +333,7 @@ The models are loaded once at container startup and kept in memory. A single Uvi
 
 ## Data in the Cloud
 
-**Google BigQuery** (`cs163-project-487801`):
+**Google BigQuery** (`cs163-amazon-analysis`):
 
 | Dataset | Table | Description |
 |---|---|---|

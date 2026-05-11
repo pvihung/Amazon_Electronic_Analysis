@@ -7,7 +7,7 @@ directly against BigQuery so the data is clean before EDA loads it.
 import os
 from google.cloud import bigquery
 
-PROJECT_ID = os.environ.get("GCP_PROJECT", "cs163-project-487801")
+PROJECT_ID = os.environ.get("GCP_PROJECT", "cs163-amazon-analysis")
 client = bigquery.Client(project=PROJECT_ID)
 
 # SQL queries 
