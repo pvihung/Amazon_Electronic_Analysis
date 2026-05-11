@@ -5,9 +5,10 @@ instance_class: F4_1G
 env_variables:
   DEBUG: "false"
   GCS_BUCKET_NAME: "cs163-amazon-review-analysis-data"
+  ABSA_API_URL: "https://absa-api-467984634090.us-central1.run.app"
 
 automatic_scaling:
   min_instances: 0
-  max_instances: 1
+  max_instances: 3
 
 entrypoint: gunicorn -b :$PORT app.main:server

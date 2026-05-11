@@ -9,11 +9,8 @@ scikit-learn==1.6.1
 joblib==1.4.2
 plotly==5.22.0
 statsmodels==0.14.6
-transformers
 scipy~=1.17.1
 scikit-multilearn~=0.2.0
 protobuf~=4.25.9
-torch~=2.11.0
-transformers~=5.7.0
 tqdm~=4.67.3
 langdetect~=1.0.9

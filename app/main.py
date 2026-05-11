@@ -11,7 +11,7 @@ from app.callbacks import register_callbacks, start_background_warmup
 # App init
 app = dash.Dash(
     __name__,
-    title="Amazon Digital Devices EDA",
+    title="Amazon Digital Devices",
     suppress_callback_exceptions=True,   # tabs render content lazily
 )
 server = app.server  # expose Flask server for GAE / gunicorn

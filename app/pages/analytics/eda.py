@@ -38,7 +38,8 @@ def render(df: pd.DataFrame) -> html.Div:
                 "compare 2018 - 2022 for fair year-over-year analysis. "
                 "December and January consistently peak; September onward loses volume in the dataset."
             ),
-            two_col(eda_covid.keyword_shift(df), eda_covid.keyword_lift(df)),
+            one_col(eda_covid.keyword_shift(df)),
+            one_col(eda_covid.keyword_lift(df)),
             insight_note(
                 "During COVID, WFH-related keywords surged — 'work from home' and 'zoom/video call' "
                 "spiked the most. The lift chart shows relative change vs. pre-COVID; "

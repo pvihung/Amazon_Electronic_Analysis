@@ -21,7 +21,7 @@ def render() -> html.Div:
             html.Div([
                 _mini_point("Domain-Adaptive Pretraining (DAPT)",
                             "Before fine-tuning, we further pretrained the language models on a large corpus of Amazon review sentences. This helps the models better understand the specific language and style used in customer reviews."),
-                _mini_point("Model 1: Mult-task Aspect Detector",
+                _mini_point("Model 1: Multi-task Aspect Detector",
                             "This model classifies whether a sentence is unrelated, general opinion, or technical content before defining the main aspect(s) in the sentence."),
                 _mini_point("Model 2: Aspect Sentiment Classification",
                             "For sentences that contain technical content, a second model classifies the sentiment of each aspect mentioned as positive or negative."),
@@ -62,7 +62,7 @@ def render() -> html.Div:
         ),
 
         card(
-            section_heading("Model 2 — Multitask aspect detector"),
+            section_heading("Model 2 — Aspect sentiment classifier"),
             body_text(
                 "A DeBerta model pre-trained on Aspect-Based Sentiment Analysis tasks."
                 "Takes a (sentence, aspect) pair and classifies the sentiment as positive or negative."
@@ -78,6 +78,8 @@ def _results_card() -> html.Div:
         html.Div([
             _metric("Model 1", "0.8234", "Independent F1-macro"),
             _metric("Model 2", "0.9282", "Independent F1-macro"),
+            _metric("Pipeline", "0.8332", "Cascaded F1-macro"),
+            _metric("Coverage", "84.40%", "True technical sentences captured")
         ], style={
             "display": "grid",
             "gridTemplateColumns": "repeat(auto-fit, minmax(150px, 1fr))",

@@ -22,6 +22,7 @@ def render(initial_sub_tab: str = "sub-models-data-overview") -> html.Div:
                     children=[
                         _sub_tab("sub-models-data_overview",  "Data Overview and Preprocessing"),
                         _sub_tab("sub-models-models-detail", "Models Detail"),
+                        _sub_tab("sub-models-demo",          "Live Demo"),
                     ],
                     style={"borderBottom": "2px solid #D0DCE8"},
                     colors={"border": "transparent", "primary": "transparent", "background": "transparent"},

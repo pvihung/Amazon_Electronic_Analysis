@@ -30,27 +30,10 @@ def _prep_binned(df: pd.DataFrame) -> tuple:
 
 
 def price_breakpoint_chart(df: pd.DataFrame) -> go.Figure:
-    """Two-panel: avg rating by price bin (top) + % negative reviews (bottom)."""
-    wp, binned = _prep_binned(df)
+    """Avg rating by price bin with ±1 SE band and plateau zone."""
+    _, binned = _prep_binned(df)
 
-    wp["is_negative"] = (wp["rating"] <= 3).astype(int)
-    neg_binned = (
-        wp.groupby("price_mid", observed=True)["is_negative"]
-        .agg(["mean", "count"])
-        .reset_index()
-        .rename(columns={"price_mid": "price", "mean": "neg_rate"})
-    )
-    neg_binned = neg_binned[neg_binned["count"] >= MIN_COUNT].copy()
-    neg_binned["neg_pct"] = neg_binned["neg_rate"] * 100
-
-    fig = make_subplots(
-        rows=2, cols=1,
-        subplot_titles=(
-            f"Average Star Rating by Price (${BIN_SIZE} bins) — Breakpoint View",
-            "% Negative Reviews (1–3 stars) by Price",
-        ),
-        vertical_spacing=0.14,
-    )
+    fig = go.Figure()
 
     # ±1 SE shaded band
     x_fwd = list(binned["price"].astype(float))
@@ -65,7 +48,7 @@ def price_breakpoint_chart(df: pd.DataFrame) -> go.Figure:
         line=dict(color="rgba(0,0,0,0)"),
         name="±1 SE",
         showlegend=False,
-    ), row=1, col=1)
+    ))
 
     # Avg rating line
     fig.add_trace(go.Scatter(
@@ -75,7 +58,7 @@ def price_breakpoint_chart(df: pd.DataFrame) -> go.Figure:
         marker=dict(size=4),
         name="Avg Rating",
         showlegend=False,
-    ), row=1, col=1)
+    ))
 
     # Typical plateau zone shading (4.0–4.5)
     fig.add_hrect(
@@ -86,26 +69,13 @@ def price_breakpoint_chart(df: pd.DataFrame) -> go.Figure:
         annotation_position="top right",
         annotation_font_size=11,
         annotation_font_color="#888",
-        row=1, col=1,
     )
 
-    # % negative line
-    fig.add_trace(go.Scatter(
-        x=neg_binned["price"], y=neg_binned["neg_pct"],
-        mode="lines+markers",
-        line=dict(color="#e74c3c", width=2),
-        marker=dict(size=4),
-        name="% Negative",
-        showlegend=False,
-    ), row=2, col=1)
-
-    fig.update_xaxes(title_text="Price ($)", row=1, col=1)
-    fig.update_xaxes(title_text="Price ($)", row=2, col=1)
-    fig.update_yaxes(title_text="Average Rating", row=1, col=1)
-    fig.update_yaxes(title_text="% Negative Reviews", row=2, col=1)
+    fig.update_xaxes(title_text="Price ($)")
+    fig.update_yaxes(title_text="Average Rating")
     fig.update_layout(
-        height=680,
-        legend=dict(x=0.75, y=0.97),
+        title=f"Average Star Rating by Price (${BIN_SIZE} bins) — Breakpoint View",
+        height=400,
         margin=dict(t=60),
     )
     return fig

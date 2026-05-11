@@ -1,7 +1,19 @@
 import pandas as pd
 from dash import dcc, html
 
-from app.layout import body_text, card, section_heading
+from app.layout import body_text, card, section_heading, PRIMARY, NAV_BG, TEXT, MUTED
+
+
+def _finding(label: str, text: str) -> html.Div:
+    return html.Div([
+        html.Strong(label + ": ", style={"color": NAV_BG}),
+        html.Span(text, style={"color": TEXT}),
+    ], style={
+        "marginBottom": "10px",
+        "fontFamily": "Segoe UI, Arial, sans-serif",
+        "fontSize": "0.92rem",
+        "lineHeight": "1.65",
+    })
 
 
 def render(_df: pd.DataFrame, initial_sub_tab: str = "sub-eda") -> html.Div:
@@ -10,7 +22,28 @@ def render(_df: pd.DataFrame, initial_sub_tab: str = "sub-eda") -> html.Div:
     return html.Div([
         card(
             section_heading("Major Findings"),
-            body_text("We're working on this part. Will update this section soon!"),
+            _finding("COVID as an inflection point",
+                     "2020 was a genuine inflection point for digital device consumer behavior — "
+                     "not just a volume spike. Mentions of webcams, speakers, microphones, and "
+                     "video call software (Zoom, Teams) surged dramatically as devices shifted "
+                     "from personal to professional tools. Crucially, several of these features "
+                     "remained elevated even after restrictions lifted, suggesting a lasting "
+                     "change in what consumers expect from digital devices."),
+            _finding("H1 — Satisfaction has price breakpoints, not a smooth gradient (Supported)",
+                     "Budget products (Q1) score highest, satisfaction dips in the mid-range, "
+                     "and only partially recovers at premium tiers — the $25 bin averages 4.52★ "
+                     "while the $475 bin drops to 3.70★. Paying more does not reliably buy "
+                     "more satisfaction."),
+            _finding("H2 — Non-verified reviewers polarise ratings (Supported)",
+                     "Verified buyers rate moderately and consistently; non-verified reviewers "
+                     "cluster at the extremes (1★ and 5★). The difference is statistically "
+                     "significant across both the Chi-square and Mann-Whitney tests, though the "
+                     "effect size is small — large datasets amplify even modest behavioural gaps."),
+            _finding("H3 — Written reviewers rate harsher than the platform average (Supported)",
+                     "Customers who write reviews are a self-selected, more critical group. "
+                     "For the majority of products, their mean rating falls below the published "
+                     "platform average — which also includes silent star-only raters. "
+                     "Treating written reviews as representative overstates dissatisfaction."),
         ),
         html.Div(
             style={

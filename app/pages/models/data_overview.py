@@ -23,9 +23,12 @@ _RARE_THRESHOLD = CFG.AUG_RARE_THRESHOLD
 _AUG_NUM        = CFG.AUG_NUM_PER_SAMPLE
 
 
+_bucket = os.environ.get("GCS_BUCKET_NAME", "cs163-amazon-review-analysis-data")
+_FINAL_CSV_URL = f"https://storage.googleapis.com/{_bucket}/final.csv"
+
+
 def render() -> html.Div:
-    base_path      = os.path.join(os.path.dirname(__file__), '..', '..', '..','dataset')
-    final_csv_path = os.path.join(base_path, 'final.csv')
+    final_csv_path = _FINAL_CSV_URL
 
     try:
         df = load_labeled_data(final_csv_path)

@@ -5,6 +5,7 @@ import pandas as pd
 from dash import Input, Output, State, html
 from dash.exceptions import PreventUpdate
 
+from app.layout import PRIMARY, MUTED, TEXT
 from app.pages import dataset, methods, overview
 from app.pages.analytics import eda, hypothesis1, hypothesis2, hypothesis3
 from app.pages.analytics import analytics as analytics_page
@@ -31,6 +32,7 @@ _PATH_FROM_SUB_TAB = {
     "sub-hyp3": "/analysis/hypothesis3",
     "sub-models-data_overview": "/models/models-comparison",
     "sub-models-models-detail": "/models/models-detail",
+    "sub-models-demo":          "/models/demo",
 }
 
 _SUB_TAB_FROM_SLUG = {
@@ -42,7 +44,8 @@ _SUB_TAB_FROM_SLUG = {
 
 _MODELS_SUB_TAB_FROM_SLUG = {
     "models-data-overview": "sub-models-data_overview",
-    "models-detail": "sub-models-models-detail",
+    "models-detail":        "sub-models-models-detail",
+    "demo":                 "sub-models-demo",
 }
 
 def _main_tab(pathname: str) -> str:
@@ -252,5 +255,119 @@ def register_callbacks(app):
         elif sub_tab == "sub-models-models-detail":
             from app.pages.models import models_detail
             return models_detail.render()
+        elif sub_tab == "sub-models-demo":
+            from app.pages.models import demo
+            return demo.render()
         else:
             return html.Div("Unknown tab.")
+
+    @app.callback(
+        Output("demo-output", "children"),
+        Input("demo-run-btn", "n_clicks"),
+        State("demo-input-text", "value"),
+        prevent_initial_call=True,
+    )
+    def run_demo_pipeline(n_clicks, text):
+        import json
+        import urllib.request
+
+        _FONT = "Segoe UI, Arial, sans-serif"
+
+        if not text or not text.strip():
+            return html.P("Please enter a review sentence.",
+                          style={"color": MUTED, "fontFamily": _FONT})
+
+        api_url = os.environ.get("ABSA_API_URL", "").rstrip("/")
+        if not api_url:
+            return html.P("ABSA_API_URL is not configured.",
+                          style={"color": "red", "fontFamily": _FONT})
+
+        try:
+            body = json.dumps({"text": text.strip()}).encode()
+            req = urllib.request.Request(
+                f"{api_url}/predict",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                result = json.loads(resp.read())
+        except Exception as exc:
+            return html.P(f"API error: {exc}",
+                          style={"color": "red", "fontFamily": _FONT})
+
+        # ── Stage badges ────────────────────────────────────────────────────
+        def _badge(label, ok):
+            bg    = "#eaf7f0" if ok else "#fdecea"
+            color = "#1e8449" if ok else "#c0392b"
+            icon  = "✓" if ok else "✗"
+            return html.Span(
+                f"{label} {icon}",
+                style={
+                    "display": "inline-block",
+                    "backgroundColor": bg, "color": color,
+                    "borderRadius": "4px", "padding": "4px 10px",
+                    "fontSize": "0.82rem", "fontWeight": "700",
+                    "fontFamily": _FONT, "marginRight": "8px",
+                },
+            )
+
+        badges = html.Div([
+            _badge("Related",   result["is_related"]),
+            _badge("Technical", result["is_technical"]),
+        ], style={"marginBottom": "14px"})
+
+        if not result["is_related"] or not result["is_technical"]:
+            return html.Div([
+                badges,
+                html.P(
+                    "This sentence was not classified as a technical product review.",
+                    style={"color": MUTED, "fontFamily": _FONT, "fontSize": "0.92rem"},
+                ),
+            ])
+
+        # ── Aspect chips ────────────────────────────────────────────────────
+        def _chip(label, sentiment):
+            if sentiment == "Positive":
+                bg, color = "#eaf7f0", "#1e8449"
+            elif sentiment == "Negative":
+                bg, color = "#fdecea", "#c0392b"
+            else:
+                bg, color = "#f0f0f0", "#666666"
+            return html.Span(
+                label,
+                style={
+                    "display": "inline-block",
+                    "backgroundColor": bg, "color": color,
+                    "borderRadius": "4px", "padding": "5px 12px",
+                    "marginRight": "8px", "marginBottom": "8px",
+                    "fontFamily": _FONT, "fontSize": "0.85rem", "fontWeight": "600",
+                },
+            )
+
+        chips = [
+            _chip(
+                f"{a['aspect']} — {a['sentiment']} ({a['confidence']:.0%})",
+                a["sentiment"],
+            )
+            for a in result["sentiment_aspects"]
+        ] + [
+            _chip(f"{a} — mentioned", "neutral")
+            for a in result["mentioned_aspects"]
+        ]
+
+        label_style = {
+            "fontFamily": _FONT, "fontSize": "0.78rem", "fontWeight": "700",
+            "color": MUTED, "textTransform": "uppercase", "letterSpacing": "1px",
+            "marginBottom": "8px",
+        }
+
+        aspects_block = html.Div([
+            html.P("Detected Aspects", style=label_style),
+            html.Div(chips),
+        ]) if chips else html.P(
+            "No specific aspects detected.",
+            style={"color": MUTED, "fontFamily": _FONT, "fontSize": "0.92rem"},
+        )
+
+        return html.Div([badges, aspects_block])

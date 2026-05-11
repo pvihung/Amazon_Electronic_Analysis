@@ -211,5 +211,10 @@ __marimo__/
 # data
 dataset/
 *.csv
+*.json
 
 .DS_Store
+
+dapt_roberta/
+model1_multitask/
+model2_sentiment/

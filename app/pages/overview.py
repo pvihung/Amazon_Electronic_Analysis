@@ -17,20 +17,24 @@ def render() -> html.Div:
             body_text(
                 "This project collects and cleans Amazon product review data, applies a "
                 "machine-learning classifier to filter for genuine digital device reviews, "
-                "and then performs a comprehensive exploratory data analysis (EDA). "
+                "and then performs exploratory data analysis and statistical hypothesis testing. "
                 "We examine rating distributions, price-tier effects, seasonal trends, "
-                "review text length, VADER sentiment scores, brand performance, and "
-                "feature correlations."
+                "review text length, VADER sentiment scores, and brand performance. "
+                "Beyond EDA, we build a two-stage aspect-based sentiment analysis (ABSA) pipeline — "
+                "a multitask RoBERTa model to detect which product aspects a review discusses, "
+                "followed by a DeBERTa model to classify the sentiment of each aspect as positive or negative."
             ),
             research_box(
-                html.H4("Research Question",
+                html.H4("Research Questions",
                         style={"color": "#1E2736", "margin": "0 0 8px",
                                "fontFamily": "Segoe UI, Arial, sans-serif",
                                "fontSize": "0.95rem"}),
                 html.Ul(
                     [
-                        html.Li("What factors do device category, price tier, brand, or review sentiment, best predict whether a customer leaves a high (≥ 4★) or low (≤ 2★) rating?"),
-                        html.Li("How have review volumes and spending patterns shifted over time?"),
+                        html.Li("Does customer satisfaction increase linearly with product price, or do distinct price-tier breakpoints drive non-linear differences in ratings?"),
+                        html.Li("Do verified purchasers leave systematically different rating distributions compared to non-verified reviewers?"),
+                        html.Li("Do customers who write text reviews rate products differently from the platform-wide average that includes silent star-only raters?"),
+                        html.Li("Which product aspects — such as battery, screen, or performance — most frequently drive positive or negative sentiment in customer reviews, and can a two-stage NLP pipeline reliably extract and classify aspect-level sentiment from free-text?"),
                     ],
                     style={"color": "#2d2d2d", "fontSize": "0.95rem",
                            "fontFamily": "Segoe UI, Arial, sans-serif",

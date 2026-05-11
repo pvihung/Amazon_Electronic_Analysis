@@ -35,7 +35,7 @@ def build_layout() -> html.Div:
                                "fontFamily": "Segoe UI, Arial, sans-serif"},
                     ),
                     html.H1(
-                        "Amazon Digital Devices EDA",
+                        "Amazon Digital Devices",
                         style={"color": "white", "margin": "0 0 14px",
                                "fontSize": "2.6rem", "fontWeight": "700",
                                "letterSpacing": "-0.5px"},
