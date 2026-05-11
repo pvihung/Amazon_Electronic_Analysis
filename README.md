@@ -1,6 +1,7 @@
 # Amazon Electronics Review Analysis
 
 A data science project that collects, cleans, and analyzes millions of Amazon customer reviews for digital devices (laptops, tablets, desktops). The project covers exploratory data analysis, statistical hypothesis testing, and a two-stage Aspect-Based Sentiment Analysis (ABSA) pipeline - all presented through an interactive web dashboard.
+## Website
 <a href=""> https://cs163-amazon-review-analysis.uc.r.appspot.com/ </a>
 ---
 
@@ -85,7 +86,7 @@ Raw Amazon Electronics Data
 
 ```
 Amazon_Electronic_Analysis/
-├── pipeline/          # Three-step data processing pipeline
+├── data_cleaning_pipeline/          # Three-step data processing pipeline
 │   ├── run_pipeline.py        # Orchestrator — runs all steps in order
 │   ├── step1_ml_filter.py     # ML classifier to identify digital device products
 │   ├── step2_bq_queries.py    # BigQuery SQL: join reviews ↔ products, deduplicate
@@ -143,30 +144,7 @@ Amazon_Electronic_Analysis/
 ## System Design
 
 ```
-                         ┌──────────────────────┐
-                         │   Google BigQuery     │
-                         │  (data warehouse)     │
-                         │  amazon_electronics.* │
-                         │  digital_devices.*    │
-                         └──────────┬───────────┘
-                                    │  queries
-                    ┌───────────────┘
-                    ▼
-           ┌─────────────────┐         ┌──────────────────────┐
-           │  Data Pipeline  │         │  Google Cloud        │
-           │  (local / CI)   │         │  Storage (GCS)       │
-           │  steps 1–3      │────────▶│  cs163-amazon-       │
-           └─────────────────┘         │  review-analysis-data│
-                                       └──────────────────────┘
-                                                  │
-                   ┌──────────────────────────────┘
-                   ▼
-        ┌──────────────────────┐          ┌──────────────────────────┐
-        │  Google App Engine   │  HTTP    │  Google Cloud Run        │
-        │  Dash Web App        │───────▶  │  ABSA Inference API      │
-        │  F4_1G instances     │          │  (FastAPI, Docker)       │
-        │  auto-scale 0 → 3    │          │  /predict  /predict/batch│
-        └──────────────────────┘          └──────────────────────────┘
+                        SYSTEM DESIGN DIAGRAM GOES HERE
 ```
 
 **Scalability:**
@@ -300,6 +278,3 @@ absa-api/
 
 ---
 
-## Website
-
-[https://cs163-project-487801.ue.r.appspot.com](https://cs163-project-487801.ue.r.appspot.com)
