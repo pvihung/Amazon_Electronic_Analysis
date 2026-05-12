@@ -30,7 +30,7 @@ _PATH_FROM_SUB_TAB = {
     "sub-hyp1": "/analysis/hypothesis1",
     "sub-hyp2": "/analysis/hypothesis2",
     "sub-hyp3": "/analysis/hypothesis3",
-    "sub-models-data_overview": "/models/models-comparison",
+    "sub-models-data_overview": "/models/models-data-overview",
     "sub-models-models-detail": "/models/models-detail",
     "sub-models-demo":          "/models/demo",
 }

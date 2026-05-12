@@ -1,6 +1,6 @@
 from dash import dcc, html
 
-def render(initial_sub_tab: str = "sub-models-data-overview") -> html.Div:
+def render(initial_sub_tab: str = "sub-models-data_overview") -> html.Div:
     # Sub-tab children are intentionally empty here — content is injected lazily
     # by the render_sub_tab callback in callbacks.py, so only the selected tab is computed.
     return html.Div([

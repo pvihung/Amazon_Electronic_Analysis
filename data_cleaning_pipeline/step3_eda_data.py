@@ -14,10 +14,10 @@ Data source (controlled by environment variable USE_LOCAL_CSV):
                     writes dataset/eda_ready.csv
                     
 To run locally: 
-    python pipeline/step3_eda_data.py
+    python data_cleaning_pipeline/step3_eda_data.py
 
 To force BigQuery mode:
-    USE_LOCAL_CSV=false python pipeline/step3_eda_data.py
+    USE_LOCAL_CSV=false python data_cleaning_pipeline/step3_eda_data.py
 """
 
 import os
@@ -31,7 +31,7 @@ for resource in ("vader_lexicon", "stopwords", "wordnet"):
     nltk.download(resource, quiet=True)
 
 # Config 
-PROJECT_ID   = os.environ.get("GCP_PROJECT", "cs163-project-487801")
+PROJECT_ID   = os.environ.get("GCP_PROJECT", "cs163-amazon-analysis")
 SOURCE_TABLE = f"{PROJECT_ID}.amazon_digital_devices_cleaned.digital_devices_reviews_no_duplicates"
 OUTPUT_TABLE = f"{PROJECT_ID}.amazon_digital_devices_cleaned.eda_ready"
 

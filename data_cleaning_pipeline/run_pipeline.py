@@ -6,14 +6,14 @@ Runs all three pipeline steps in order:
   3. EDA data prep (clean, categorize, sentiment, upload)
 
 Usage:
-  python pipeline/run_pipeline.py                # all steps
-  python pipeline/run_pipeline.py --steps 2 3   # specific steps only
+  python data_cleaning_pipeline/run_pipeline.py                # all steps
+  python data_cleaning_pipeline/run_pipeline.py --steps 2 3   # specific steps only
 """
 
 import argparse
 import time
 
-from pipeline import step1_ml_filter, step2_bq_queries, step3_eda_data
+from data_cleaning_pipeline import step1_ml_filter, step2_bq_queries, step3_eda_data
 
 STEPS = {
     1: ("ML Filter",       step1_ml_filter.run),

@@ -1,3 +1,7 @@
+<!-- README: Project overview and onboarding guide for the Amazon Electronics Review Analysis project.
+     Covers setup, the data cleaning pipeline, ABSA inference service, deployment, and repo structure.
+     Update the Repository Structure section whenever new files are added to the repo. -->
+
 # Amazon Electronics Review Analysis
 
 A data science project that collects, cleans, and analyzes millions of Amazon customer reviews for digital devices (laptops, tablets, desktops). The project covers exploratory data analysis, statistical hypothesis testing, and a two-stage Aspect-Based Sentiment Analysis (ABSA) pipeline - all presented through an interactive web dashboard.
@@ -12,7 +16,7 @@ A data science project that collects, cleans, and analyzes millions of Amazon cu
 ```bash
 # Create and activate a virtual environment
 python -m venv .venv
-.venv\Scripts\activate        # Windows
+.venv\Scripts\Activate.ps1        # Windows
 source .venv/bin/activate     # macOS/Linux
 
 # Install dependencies
@@ -34,8 +38,8 @@ python -m app.main
 
 **Run the data pipeline:**
 ```bash
-python -m pipeline.run_pipeline              # all steps 
-python -m pipeline.run_pipeline --steps 2 3  # specific steps only
+python -m data_cleaning_pipeline.run_pipeline              # all steps 
+python -m data_cleaning_pipeline.run_pipeline --steps 2 3  # specific steps only
 ```
 
 ---
@@ -46,21 +50,33 @@ python -m pipeline.run_pipeline --steps 2 3  # specific steps only
 Amazon Electronics Data + Metadata
         │
         ▼
-[Step 1] ML Filter (pipeline/step1_ml_filter.py)
+[Step 1] ML Filter (data_cleaning_pipeline/step1_ml_filter.py)
   TF-IDF + Logistic Regression classifies product titles
   as digital devices or not.
         │
         ▼
-[Step 2] BigQuery SQL (pipeline/step2_bq_queries.py)
+[Step 2] data_cleaning_pipeline/step2_bq_queries.py
   Joins reviews ↔ product metadata, deduplicates rows,
-  and produces a clean combined table in BigQuery.
+  and produces a clean combined table and save under dataset/digital_devices_reviews_no_duplicates.csv.
+  (initially we did joins the reviews in BigQuery but I also make this step 2 to run locally)
+
         │
         ▼
-[Step 3] EDA Data Prep (pipeline/step3_eda_data.py)
+[Step 3] EDA Data Prep (data_cleaning_pipeline/step3_eda_data.py)
   Cleans timestamps, assigns device categories (laptop/tablet/desktop),
   extracts brands, translates non-English reviews, applies VADER
   sentiment scoring, assigns price tiers. Output: dataset/eda_ready.csv
   (or BigQuery table in cloud mode).
+        │
+        ▼
+[Step 4] Exploratory Data Analysis (eda/)
+  Analyzes eda_ready.csv across multiple dimensions: category
+  distribution, rating trends, price tiers, review volume over time,
+  COVID-period impact, text/word patterns, and feature correlations.
+  Each analysis module (eda/overview.py, category.py, ratings.py,
+  price.py, time.py, text.py, covid.py, correlation.py) produces
+  interactive Plotly figures rendered live in the Dash app
+  at app/pages/analytics/eda.py.
         │
         ▼
 [ABSA Training] — Google Colab (external)
@@ -111,7 +127,17 @@ Amazon_Electronic_Analysis/
 │       ├── overview.py        # Project overview and research questions
 │       ├── dataset.py         # Dataset description page
 │       ├── methods.py         # Methods and pipeline explanation
+│       ├── analytics/         # EDA and hypothesis analysis pages
+│       │   ├── analytics.py       # Analytics section landing page
+│       │   ├── eda.py             # Exploratory data analysis visualizations
+│       │   ├── hypothesis1.py     # Hypothesis 1 test and results
+│       │   ├── hypothesis2.py     # Hypothesis 2 test and results
+│       │   └── hypothesis3.py     # Hypothesis 3 test and results
 │       └── models/            # ABSA model pages and live demo
+│           ├── data_overview.py   # Labeled training data overview
+│           ├── demo.py            # Live ABSA inference demo
+│           ├── models.py          # Model architecture description page
+│           └── models_detail.py   # Detailed model breakdown
 │
 ├── eda/               # EDA visualization modules (used by the Dash app)
 │   ├── overview.py, category.py, ratings.py, price.py, time.py
@@ -127,24 +153,98 @@ Amazon_Electronic_Analysis/
 │   ├── link_reviews_products.sql     # Joins reviews with product metadata
 │   └── duplicate_and_null_handling.sql
 │
-├── models/            # Supplementary model utilities
-│   └── labeled_data_overview.py
+├── models/            # Supplementary model utilities and training helpers
+│   ├── augmentation.py          # Data augmentation strategies for ABSA training data
+│   └── data_processing.py       # Preprocessing and dataset preparation for model training
 │
-├── notebooks/         # Exploratory Jupyter notebooks
-│   ├── EDA.ipynb
-│   ├── Amy_hypothesis.ipynb
-│   └── MLpipeline_filtering_metadata.ipynb
+├── notebooks/         # Jupyter notebooks for model development, training, and analysis
+│   ├── absa_pipeline_vfinal.ipynb          # Full end-to-end ABSA training pipeline (canonical version)
+│   ├── absa_model1.ipynb                   # Standalone notebook for Model 1 (aspect detection, RoBERTa+LoRA)
+│   ├── absa_model2.ipynb                   # Standalone notebook for Model 2 (sentiment classification, DeBERTa)
+│   ├── data_separation.ipynb               # Splits and prepares labeled datasets for M1 and M2 training
+│   └── hypothesis.ipynb                    # Statistical hypothesis testing experiments
 │
 ├── app.yaml           # Google App Engine deployment configuration
 └── requirements.txt   # Python dependencies for the web app
 ```
-
 ---
 
 ## System Design
 
 ```
-                        SYSTEM DESIGN DIAGRAM GOES HERE
+┌──────────────────────────────────────────────────────────────────────┐
+│                   Amazon Electronics Dataset                         │
+│               (HuggingFace — reviews + product metadata)             │
+└──────────────────────────────┬───────────────────────────────────────┘
+                               │
+                               ▼
+            ╔═════════════════════════════════════════╗
+            ║          DATA CLEANING PIPELINE         ║
+            ║                                         ║
+            ║  ┌──────────────────────────────────┐   ║
+            ║  │ Step 1 · ML Filter               │   ║
+            ║  │ TF-IDF + Logistic Regression     │   ║
+            ║  │ identifies digital device titles │   ║
+            ║  └─────────────────┬────────────────┘   ║
+            ║                    │                    ║
+            ║  ┌─────────────────▼────────────────┐   ║
+            ║  │ Step 2 · BigQuery SQL            │   ║
+            ║  │ Join reviews ↔ product metadata  │   ║
+            ║  │ Deduplicate rows                 │   ║
+            ║  └─────────────────┬────────────────┘   ║
+            ║                    │                    ║
+            ║  ┌─────────────────▼────────────────┐   ║
+            ║  │ Step 3 · EDA Data Prep           │   ║
+            ║  │ VADER sentiment · brand extract  │   ║
+            ║  │ translations · price tiers       │   ║
+            ║  └─────────────────┬────────────────┘   ║
+            ╚════════════════════╪════════════════════╝
+                                 │
+                                 ▼
+                          ┌──────────────┐
+                          │     GCS      │
+                          │   (bucket)   │
+                          └──────┬───────┘
+                                 │
+       ┌─────────────────────────┘
+       │
+       │    ┌────────────────────────────────────────┐
+       │    │     ABSA Training  (Google Colab)      │
+       │    │                                        │
+       │    │  DAPT pre-training → RoBERTa backbone  │
+       │    │            ↓                           │
+       │    │  M1 · RoBERTa + LoRA (multitask)       │
+       │    │      aspect detection per category     │
+       │    │            ↓                           │
+       │    │  M2 · DeBERTa (sentiment classifier)   │
+       │    │      positive / negative per aspect    │
+       │    └────────────────────┬───────────────────┘
+       │                         │
+       │                         ▼
+       │         ┌───────────────────────────────┐
+       │         │     ABSA Inference API        │
+       │         │     FastAPI · Docker          │
+       │         │     Google Cloud Run          │
+       │         │                               │
+       │         │   GET  /health                │
+       │         │   POST /predict               │
+       │         │   POST /predict/batch         │
+       │         └───────────────┬───────────────┘
+       │                         │ HTTP REST
+       │                         ▼
+       │         ┌───────────────────────────────┐
+       └───────▶│        Dash Web App           │
+                 │     Google App Engine         │
+                 │                               │
+                 │  Overview · Dataset · EDA     │
+                 │  Hypothesis · ABSA Live Demo  │
+                 └───────────────┬───────────────┘
+                                 │
+                                 ▼
+                           ┌──────────┐
+                           │   User   │
+                           │ Browser  │
+                           └──────────┘
 ```
 
 **Scalability:**
@@ -170,7 +270,7 @@ absa-api/
 ├── model1_multitask/      ← download from [Drive]
 ├── model2_sentiment/      ← download from [Drive]
 ├── app/
-├── ├──main.py
+├── ├──main.py 
 ├── ├──models.py
 ├── └──schemas.py 
 ├── Dockerfile
@@ -220,7 +320,7 @@ gcloud run deploy absa-api \
   --image gcr.io/cs163-amazon-analysis/absa-api \
   --platform managed \
   --region us-central1 \
-  --memory 4Gi \
+  --memory 8Gi \
   --cpu 2 \
   --timeout 300 \
   --allow-unauthenticated
@@ -248,9 +348,6 @@ The ABSA API runs as a FastAPI application on **Google Cloud Run**:
 2. **M2 — DeBERTa (sentiment):** For each detected aspect, classifies its sentiment as positive or negative using a (review, aspect) text-pair encoding.
 
 The models are loaded once at container startup and kept in memory. A single Uvicorn worker is used to avoid out-of-memory errors (~1.5 GB per model).
-
-**Training** was done on Google Colab:
-[ABSA Training Notebook](https://colab.research.google.com/drive/1bem5kz0FBWC22zAFnU1D_xa6oHxdUZPW)
 
 ---
 
