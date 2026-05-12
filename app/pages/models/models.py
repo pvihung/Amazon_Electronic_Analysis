@@ -1,8 +1,4 @@
-import pandas as pd
 from dash import dcc, html
-
-from app.layout import body_text, card, section_heading
-
 
 def render(initial_sub_tab: str = "sub-models-data-overview") -> html.Div:
     # Sub-tab children are intentionally empty here — content is injected lazily
