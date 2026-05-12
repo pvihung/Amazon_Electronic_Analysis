@@ -284,7 +284,7 @@ absa-api/
 
 To prepare the data for Aspect-Based Sentiment Analysis (ABSA), we created both labeled and unlabeled datasets from the product review corpus.
 
-### Labeled Data
+### Labeled Data (final.csv)
 
 The labeled dataset was constructed by sampling **500 product reviews** from the review data. To ensure that the sample was representative of the original dataset, the reviews were sampled based on the **rating distribution**. This helped preserve the proportion of low-rated, neutral, and high-rated reviews in the labeled subset.
 
@@ -297,11 +297,11 @@ After sampling, each review was split into individual sentences. These sentence-
 
 This labeled dataset was used for supervised training and evaluation of the ABSA models.
 
-### Unlabeled Data
+### Unlabeled Data (final_nonlabel.csv)
 
 The unlabeled dataset was created from the remaining reviews after removing the reviews used in the labeled dataset. These reviews were also split into sentence-level samples to match the format of the labeled data.
 
-Unlike the labeled dataset, the unlabeled data does not contain manual annotations. It was used as additional text data for model development tasks such as domain adaptation, representation learning, or inference over a larger review corpus.
+Unlike the labeled dataset, the unlabeled data does not contain manual annotations. It was used as additional text data for model development tasks such as domain adaptation, representation learning, or inference over a larger review corpus. The final_nonlabel dataset (unlabeled data) can be obtained by using final.csv as the labeled data and eda_ready.csv, then running the data_separation.ipynb notebook.
 
 ---
 
