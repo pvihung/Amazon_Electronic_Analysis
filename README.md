@@ -87,60 +87,71 @@ Amazon Electronics Data + Metadata
 ```
 Amazon_Electronic_Analysis/
 ├── data_cleaning_pipeline/          # Three-step data processing pipeline
-│   ├── run_pipeline.py        # Orchestrator — runs all steps in order
-│   ├── step1_ml_filter.py     # ML classifier to identify digital device products
-│   ├── step2_bq_queries.py    # BigQuery SQL: join reviews ↔ products, deduplicate
-│   └── step3_eda_data.py      # Feature engineering and EDA data preparation
+│   ├── run_pipeline.py              # Orchestrator — runs all steps in order
+│   ├── step1_ml_filter.py           # ML classifier to identify digital device products
+│   ├── step2_bq_queries.py          # BigQuery SQL: join reviews ↔ products, deduplicate
+│   └── step3_eda_data.py            # Feature engineering and EDA data preparation
 │
-├── absa-api/          # Containerized ABSA inference service (FastAPI + Docker)
+├── absa-api/                        # Containerized ABSA inference service (FastAPI + Docker)
 │   ├── app/
-│   │   ├── main.py            # FastAPI app with /predict and /predict/batch endpoints
-│   │   ├── models.py          # Model architectures (M1: RoBERTa+LoRA, M2: DeBERTa)
-│   │   └── schemas.py         # Pydantic request/response schemas
-│   ├── dapt_roberta/          # Domain-adapted RoBERTa backbone (weights via Drive)
-│   ├── model1_multitask/      # Multitask aspect-detection model (weights via Drive)
-│   ├── model2_sentiment/      # Aspect-sentiment classifier (weights via Drive)
+│   │   ├── main.py                  # FastAPI app with /predict and /predict/batch endpoints
+│   │   ├── models.py                # Model architectures (M1: RoBERTa+LoRA, M2: DeBERTa)
+│   │   └── schemas.py               # Pydantic request/response schemas
+│   ├── dapt_roberta/                # Domain-adapted RoBERTa backbone (weights via Drive)
+│   ├── model1_multitask/            # Multitask aspect-detection model (weights via Drive)
+│   ├── model2_sentiment/            # Aspect-sentiment classifier (weights via Drive)
 │   ├── Dockerfile
 │   └── requirements.txt
 │
-├── app/               # Dash web application (Google App Engine)
-│   ├── main.py                # Entry point; initializes Dash server
-│   ├── layout.py              # Shared layout components and helpers
-│   ├── callbacks.py           # Dash callback logic
-│   └── pages/                 # One module per dashboard page
-│       ├── overview.py        # Project overview and research questions
-│       ├── dataset.py         # Dataset description page
-│       ├── methods.py         # Methods and pipeline explanation
-│       ├── models/            # ABSA model pages and live demo
+├── app/                             # Dash web application (Google App Engine)
+│   ├── main.py                      # Entry point; initializes Dash server
+│   ├── layout.py                    # Shared layout components and helpers
+│   ├── callbacks.py                 # Dash callback logic
+│   └── pages/                       # One module per dashboard page
+│       ├── overview.py              # Project overview and research questions
+│       ├── dataset.py               # Dataset description page
+│       ├── methods.py               # Methods and pipeline explanation
+│       ├── models/                  # ABSA model pages and live demo
 │       └── analytics/
-│            ├── EDA           # EDA and Major findings
-│            ├── Hypothesis 1  
+│            ├── EDA                 # EDA and major findings
+│            ├── Hypothesis 1
 │            ├── Hypothesis 2
-│            └── Hypothesis 2        
-│       
+│            └── Hypothesis 3
 │
-├── eda/                                            # EDA visualization modules (used by the Dash app)
-│   ├── overview.py, category.py, ratings.py, price.py, time.py
-│   ├── text.py, correlation.py, covid.py
-│   └── hypothesis1.py, hypothesis2.py, hypothesis3.py
+├── eda/                             # EDA visualization modules used by the Dash app
+│   ├── overview.py
+│   ├── category.py
+│   ├── ratings.py
+│   ├── price.py
+│   ├── time.py
+│   ├── text.py
+│   ├── correlation.py
+│   ├── covid.py
+│   ├── hypothesis1.py
+│   ├── hypothesis2.py
+│   └── hypothesis3.py
 │
-├── dataset/                                        # Local CSV data files ()
-│   ├── electronics.csv metadata.csv                # Original dataset from Hugging Face
+├── dataset/                         # Local CSV data files
+│   ├── electronics.csv              # Original reviews dataset from Hugging Face
+│   ├── metadata.csv                 # Original metadata dataset from Hugging Face
 │   ├── digital_devices_reviews_no_duplicates.csv   # Post-Step-2 deduplicated data
-│   ├── eda_ready.csv                               # Post-Step-3 feature-engineered data
+│   ├── eda_ready.csv                # Post-Step-3 feature-engineered data
 │   └── final.csv
 │
+├── models/                          # Supplementary model utilities used by Dash app
+│   ├── data_processing.py           # Data processing helpers for model preparation
+│   └── augmentation.py              # Data augmentation utilities
 │
-├── models/                                         # Supplementary model utilities
-│   └── labeled_data_overview.py
+├── notebooks/                       # Jupyter notebooks used during development
+│   ├── absa_pipeline_vfinal.ipynb   # Final ABSA pipeline notebook
+│   ├── absa_model1.ipynb            # ABSA Model 1 development notebook
+│   ├── absa_model2.ipynb            # ABSA Model 2 development notebook
+│   ├── hypothesis.ipynb             # Hypothesis analysis notebook
+│   ├── MLpipeline_filtering_metadata.ipynb   # Metadata filtering ML pipeline
+│   └── Notebook.md                  # Notebook reminders and usage notes
 │
-├── notebooks/                                      # All Jupyter notebooks that we used to
-│   ├── absa_pipeline_v6.ipynb                      # Aspect-Based Sentiment Analysis (ABSA) pipeline
-│   ├── hypothesis.ipynb
-│   └── MLpipeline_filtering_metadata.ipynb
-│
-├── app.yaml                                        # Google App Engine deployment configuration
-└── requirements.txt                                # Python dependencies for the web app
+├── app.yaml                         # Google App Engine deployment configuration
+└── requirements.txt                 # Python dependencies for the web app
 ```
 
 ---
