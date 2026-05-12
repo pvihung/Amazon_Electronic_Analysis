@@ -87,19 +87,19 @@ Amazon Electronics Data + Metadata
 ```
 Amazon_Electronic_Analysis/
 ├── data_cleaning_pipeline/          # Three-step data processing pipeline
-│   ├── run_pipeline.py        # Orchestrator — runs all steps in order
-│   ├── step1_ml_filter.py     # ML classifier to identify digital device products
-│   ├── step2_bq_queries.py    # BigQuery SQL: join reviews ↔ products, deduplicate
-│   └── step3_eda_data.py      # Feature engineering and EDA data preparation
+│   ├── run_pipeline.py              # Orchestrator — runs all steps in order
+│   ├── step1_ml_filter.py           # ML classifier to identify digital device products
+│   ├── step2_bq_queries.py          # BigQuery SQL: join reviews ↔ products, deduplicate
+│   └── step3_eda_data.py            # Feature engineering and EDA data preparation
 │
-├── absa-api/          # Containerized ABSA inference service (FastAPI + Docker)
+├── absa-api/                        # Containerized ABSA inference service (FastAPI + Docker)
 │   ├── app/
-│   │   ├── main.py            # FastAPI app with /predict and /predict/batch endpoints
-│   │   ├── models.py          # Model architectures (M1: RoBERTa+LoRA, M2: DeBERTa)
-│   │   └── schemas.py         # Pydantic request/response schemas
-│   ├── dapt_roberta/          # Domain-adapted RoBERTa backbone (weights via Drive)
-│   ├── model1_multitask/      # Multitask aspect-detection model (weights via Drive)
-│   ├── model2_sentiment/      # Aspect-sentiment classifier (weights via Drive)
+│   │   ├── main.py                  # FastAPI app with /predict and /predict/batch endpoints
+│   │   ├── models.py                # Model architectures (M1: RoBERTa+LoRA, M2: DeBERTa)
+│   │   └── schemas.py               # Pydantic request/response schemas
+│   ├── dapt_roberta/                # Domain-adapted RoBERTa backbone (weights via Drive)
+│   ├── model1_multitask/            # Multitask aspect-detection model (weights via Drive)
+│   ├── model2_sentiment/            # Aspect-sentiment classifier (weights via Drive)
 │   ├── Dockerfile
 │   └── requirements.txt
 │
@@ -111,38 +111,32 @@ Amazon_Electronic_Analysis/
 │       ├── overview.py        # Project overview and research questions
 │       ├── dataset.py         # Dataset description page
 │       ├── methods.py         # Methods and pipeline explanation
-│       ├── models/            # ABSA model pages and live demo
-│       └── analytics/
-│            ├── EDA           # EDA and Major findings
-│            ├── Hypothesis 1  
-│            ├── Hypothesis 2
-│            └── Hypothesis 2        
-│       
+│       └── models/            # ABSA model pages and live demo
 │
-├── eda/                                            # EDA visualization modules (used by the Dash app)
+├── eda/               # EDA visualization modules (used by the Dash app)
 │   ├── overview.py, category.py, ratings.py, price.py, time.py
 │   ├── text.py, correlation.py, covid.py
 │   └── hypothesis1.py, hypothesis2.py, hypothesis3.py
 │
-├── dataset/                                        # Local CSV data files ()
-│   ├── electronics.csv metadata.csv                # Original dataset from Hugging Face
+├── dataset/           # Local CSV data files (intermediate pipeline outputs)
 │   ├── digital_devices_reviews_no_duplicates.csv   # Post-Step-2 deduplicated data
 │   ├── eda_ready.csv                               # Post-Step-3 feature-engineered data
 │   └── final.csv
 │
+├── sql/               # BigQuery SQL scripts
+│   ├── link_reviews_products.sql     # Joins reviews with product metadata
+│   └── duplicate_and_null_handling.sql
 │
-├── models/                                         # Supplementary model utilities
+├── models/            # Supplementary model utilities
 │   └── labeled_data_overview.py
 │
-├── notebooks/                                      # All Jupyter notebooks that we used to
-│   ├── absa_pipeline_model1.ipynb                      # Aspect-Based Sentiment Analysis (ABSA) pipeline
-│   ├── absa_pipeline_model2.ipynb
-│   ├── absa_pipeline_vfinal.ipynb
-│   ├── data_separation.ipynb
-│   └── hypothesis.ipynb
+├── notebooks/         # Exploratory Jupyter notebooks
+│   ├── EDA.ipynb
+│   ├── Amy_hypothesis.ipynb
+│   └── MLpipeline_filtering_metadata.ipynb
 │
-├── app.yaml                                        # Google App Engine deployment configuration
-└── requirements.txt                                # Python dependencies for the web app
+├── app.yaml           # Google App Engine deployment configuration
+└── requirements.txt   # Python dependencies for the web app
 ```
 
 ---
@@ -150,79 +144,7 @@ Amazon_Electronic_Analysis/
 ## System Design
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                   Amazon Electronics Dataset                         │
-│               (HuggingFace — reviews + product metadata)             │
-└──────────────────────────────┬───────────────────────────────────────┘
-                               │
-                               ▼
-            ╔═════════════════════════════════════════╗
-            ║              DATA PIPELINE              ║
-            ║                                         ║
-            ║  ┌──────────────────────────────────┐   ║
-            ║  │ Step 1 · ML Filter               │   ║
-            ║  │ TF-IDF + Logistic Regression     │   ║
-            ║  │ identifies digital device titles │   ║
-            ║  └─────────────────┬────────────────┘   ║
-            ║                    │                    ║
-            ║  ┌─────────────────▼────────────────┐   ║
-            ║  │ Step 2 · BigQuery SQL            │   ║
-            ║  │ Join reviews ↔ product metadata  │   ║
-            ║  │ Deduplicate rows                 │   ║
-            ║  └─────────────────┬────────────────┘   ║
-            ║                    │                    ║
-            ║  ┌─────────────────▼────────────────┐   ║
-            ║  │ Step 3 · EDA Data Prep           │   ║
-            ║  │ VADER sentiment · brand extract  │   ║
-            ║  │ translations · price tiers       │   ║
-            ║  └─────────────────┬────────────────┘   ║
-            ╚════════════════════╪════════════════════╝
-                                 │
-                                 ▼
-                          ┌──────────────┐
-                          │     GCS      │
-                          │   (bucket)   │
-                          └──────┬───────┘
-                                 │
-       ┌─────────────────────────┘
-       │
-       │    ┌────────────────────────────────────────┐
-       │    │     ABSA Training  (Google Colab)      │
-       │    │                                        │
-       │    │  DAPT pre-training → RoBERTa backbone  │
-       │    │            ↓                           │
-       │    │  M1 · RoBERTa + LoRA (multitask)       │
-       │    │      aspect detection per category     │
-       │    │            ↓                           │
-       │    │  M2 · DeBERTa (sentiment classifier)   │
-       │    │      positive / negative per aspect    │
-       │    └────────────────────┬───────────────────┘
-       │                         │
-       │                         ▼
-       │         ┌───────────────────────────────┐
-       │         │     ABSA Inference API        │
-       │         │     FastAPI · Docker          │
-       │         │     Google Cloud Run          │
-       │         │                               │
-       │         │   GET  /health                │
-       │         │   POST /predict               │
-       │         │   POST /predict/batch         │
-       │         └───────────────┬───────────────┘
-       │                         │ HTTP REST
-       │                         ▼
-       │         ┌───────────────────────────────┐
-       └────────▶│       Dash Web App            │
-                 │     Google App Engine         │
-                 │                               │
-                 │  Overview · Dataset · EDA     │
-                 │  Hypothesis · ABSA Live Demo  │
-                 └───────────────┬───────────────┘
-                                 │
-                                 ▼
-                           ┌──────────┐
-                           │   User   │
-                           │ Browser  │
-                           └──────────┘
+                        SYSTEM DESIGN DIAGRAM GOES HERE
 ```
 
 **Scalability:**
@@ -359,3 +281,35 @@ absa-api/
 
 ---
 
+## Notebook Usage Notes
+
+This folder contains the main Jupyter notebooks used during model development, experimentation, and analysis.
+
+### ABSA notebooks
+
+The notebooks `absa_model1.ipynb` and `absa_model2.ipynb` were separated from the original `absa_pipeline_vfinal.ipynb` notebook.
+
+They can be executed independently if you only need to reproduce or work with one specific ABSA model:
+
+- `absa_pipeline_vfinal.ipynb`  
+  Full final ABSA pipeline notebook.
+
+- `absa_model1.ipynb`  
+  Standalone notebook for ABSA Model 1.
+
+- `absa_model2.ipynb`  
+  Standalone notebook for ABSA Model 2.
+
+Because Model 1 and Model 2 were split from the full ABSA pipeline, each notebook can be run separately without having to execute the entire `absa_pipeline_vfinal.ipynb`.
+
+### Important note about local paths
+
+These notebooks were not originally executed in the local project directory structure.  
+Therefore, if you want to run them locally using the current repository layout, you need to update the dataset paths.
+
+Since all notebooks are located inside the `notebooks/` folder, dataset files should be accessed by moving one level up to the project root, then entering the `dataset/` folder.
+
+Use this path format:
+
+```python
+../dataset/<file_name>

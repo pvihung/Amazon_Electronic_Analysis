@@ -12,9 +12,7 @@ Loads the deduplicated review data, then applies:
 Data source (controlled by environment variable USE_LOCAL_CSV):
   LOCAL  (default): reads  dataset/digital_devices_reviews_no_duplicates.csv
                     writes dataset/eda_ready.csv
-  CLOUD:            reads  BigQuery SOURCE_TABLE
-                    writes BigQuery OUTPUT_TABLE
-
+                    
 To run locally: 
     python pipeline/step3_eda_data.py
 
