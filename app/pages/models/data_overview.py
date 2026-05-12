@@ -7,7 +7,7 @@ from app.layout import (
     body_text, one_col, two_col, section_heading,
     insight_note, PRIMARY, NAV_BG, TEXT, MUTED,
 )
-from models.labeled_data_overview import (
+from models.data_processing import (
     load_labeled_data,
     apply_pair_parsing,
     add_sentence_classification,
@@ -15,8 +15,11 @@ from models.labeled_data_overview import (
     get_technical_df,
     get_rare_classes,
     iterative_split,
-    plot_sentence_type_distribution,
+    apply_aspect_labels,
     CFG,
+)
+from models.augmentation import (
+    plot_sentence_type_distribution
 )
 
 _RARE_THRESHOLD = CFG.AUG_RARE_THRESHOLD
@@ -37,7 +40,8 @@ def render() -> html.Div:
         mlb, aspect_classes = fit_mlb(df)
         df_tech = get_technical_df(df)
 
-        train_df, _, _, y_train, _, _ = iterative_split(df_tech, mlb)
+        train_df, _, _ = iterative_split(df_tech, mlb)
+        _, y_train = apply_aspect_labels(train_df, mlb)
         rare_classes = get_rare_classes(y_train, aspect_classes, _RARE_THRESHOLD)
 
         counts_before = y_train.sum(axis=0).astype(int)
@@ -51,20 +55,7 @@ def render() -> html.Div:
         return html.Div(
             style={"paddingTop": "8px"},
             children=[
-
-                # Section 1: Sentence Type Distribution
-                section_heading("Sentence Type Distribution"),
-                one_col(sentence_fig),
-                html.Div(
-                    style={
-                        "display": "grid",
-                        "gridTemplateColumns": "repeat(3, 1fr)",
-                        "gap": "12px",
-                        "margin": "16px 0 32px",
-                    },
-                ),
-
-                # Section 2: Parsing Example with Cell
+                # Section 1: Data Label
                 section_heading('Aspects and Sentiment'),
                 html.Div(
                     style={
@@ -109,9 +100,9 @@ def render() -> html.Div:
                                                                  "borderRadius": "4px"}),
                                                 style={"padding": "10px", "borderBottom": "1px solid #eee"}),
                                         html.Td(html.Span("1;1;-1", style={"fontWeight": "600",
-                                                                             "backgroundColor": "#f1f5f9",
-                                                                             "padding": "4px 8px",
-                                                                             "borderRadius": "4px"}),
+                                                                           "backgroundColor": "#f1f5f9",
+                                                                           "padding": "4px 8px",
+                                                                           "borderRadius": "4px"}),
                                                 style={"padding": "10px", "borderBottom": "1px solid #eee"}),
                                     ]),
                                 ])
@@ -120,18 +111,31 @@ def render() -> html.Div:
                     ]
                 ),
 
+                # Section 2: Sentence Type Distribution
+                section_heading("Sentence Type Distribution"),
+                one_col(sentence_fig),
+                html.Div(
+                    style={
+                        "display": "grid",
+                        "gridTemplateColumns": "repeat(3, 1fr)",
+                        "gap": "12px",
+                        "margin": "16px 0 32px",
+                    },
+                ),
+
                 # Section 3: Aspect Distribution Before / After Aug
                 section_heading("Aspect Label Distribution"),
                 body_text(
                     f"Aspect counts in the training split before and after back-translation "
                     f"augmentation. Bars in red fall below the rare-class threshold "
-                    f"({_RARE_THRESHOLD} samples). Rare-class rows are duplicated "
-                    f"×{_AUG_NUM} with augmented text."
+                    f"({_RARE_THRESHOLD} samples). Any row containing at least one rare-class "
+                    f"aspect is back-translated (EN → DE → EN) ×{_AUG_NUM} and appended to "
+                    f"the training set with its original labels preserved."
                 ),
                 two_col(fig_before, fig_after),
                 insight_note(
-                    f"{len(rare_classes)} rare class(es) will be augmented "
-                    f"via back-translation (EN → DE → EN) during training."
+                    f"Note: 'After Augmentation' counts are simulated from the original labels and augmentation strategy, "
+                    f"not actual augmented data."
                 ),
             ],
         )
@@ -156,11 +160,12 @@ def _simulate_aug_counts(
 ) -> np.ndarray:
     """
     Simulate post-augmentation aspect counts without running actual augmentation.
-
-    Mirrors the logic in augment_rare_classes:
-      - Find rows that contain at least one rare-class aspect
-      - Those rows are duplicated `num_aug` times
-      - Return original counts + duplicated counts per aspect
+    (Prevent long wait or even run-time errors)
+    Methods:
+        Using the label matrix, check whether there are any rare classes.
+        Create a mask to select rows that should be augmented.
+        Find rows that contain at least one rare aspect -> count how many times each aspect appears in those selected rows.
+        Finally, calculate the new counts by adding the original counts and the simulated augmented counts for each aspect.
     """
     if not rare_classes:
         return y_train.sum(axis=0).astype(int)
@@ -170,8 +175,8 @@ def _simulate_aug_counts(
     for aspect_idx, _, _ in rare_classes:
         to_aug_mask |= (y_train[:, aspect_idx] == 1)
 
-    aug_y      = y_train[to_aug_mask]                      # rows being augmented
-    aug_counts = aug_y.sum(axis=0) * num_aug               # added counts per aspect
+    aug_y      = y_train[to_aug_mask]
+    aug_counts = aug_y.sum(axis=0) * num_aug
     return (y_train.sum(axis=0) + aug_counts).astype(int)
 
 

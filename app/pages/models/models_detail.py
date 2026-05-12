@@ -48,16 +48,18 @@ def render() -> html.Div:
         card(
             section_heading("Model 1 — Multitask aspect detector"),
             body_text(
-                "A multi-task RoBERTa model with LoRA that filters sentences by relevance and technical content, "
-                "then detects which product aspects are mentioned"
+                "A multi-task RoBERTa model augmented with LoRA adapters, comprising three specialized "
+                "classification heads. Each head addresses a distinct subtask independently, allowing "
+                "the model to jointly learn relevance detection, technical content classification, "
+                "and aspect detection within a single unified architecture."
             ),
             html.Div([
                 _mini_point("Head 1: Relevance Filter",
-                            "Classifies whether a sentence is unrelated to the product."),
+                            "Trained on all sentences. Filters out sentences unrelated to the product."),
                 _mini_point("Head 2: Technical Filter",
-                            "Determines whether the content of sentences passed Head 1 is specific technical feedback or general opinion."),
+                            "Trained on related sentences only. Distinguishes specific technical feedback from general opinion."),
                 _mini_point("Head 3: Aspect Detector",
-                            "Identifies which product aspects are mentioned in the sentence"),
+                            "Trained on technical sentences only. Multi-label classifier — a single sentence can mention multiple aspects simultaneously."),
             ], style={"marginTop": "16px"}),
         ),
 
@@ -76,10 +78,10 @@ def _results_card() -> html.Div:
     return card(
         section_heading("End-to-End Evaluation"),
         html.Div([
-            _metric("Model 1", "0.8234", "Independent F1-macro"),
-            _metric("Model 2", "0.9282", "Independent F1-macro"),
-            _metric("Pipeline", "0.8332", "Cascaded F1-macro"),
-            _metric("Coverage", "84.40%", "True technical sentences captured")
+            _metric("Model 1: Head 1", "0.7780", "F1-macro"),
+            _metric("Model 1: Head 2", "0.8611", "F1-macro"),
+            _metric("Model 1: Head 3", "0.8175", "F1-macro"),
+            _metric("Model 2:", "0.9097", "F1-macro"),
         ], style={
             "display": "grid",
             "gridTemplateColumns": "repeat(auto-fit, minmax(150px, 1fr))",
