@@ -44,7 +44,7 @@ python -m data_cleaning_pipeline.run_pipeline --steps 2 3  # specific steps only
 
 ---
 
-## Data Cleaning Pipeline Overview
+## Pipeline Overview
 
 ```
 Amazon Electronics Data + Metadata
