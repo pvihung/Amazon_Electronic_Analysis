@@ -136,7 +136,8 @@ Amazon_Electronic_Analysis/
 │   ├── metadata.csv                 # Original metadata dataset from Hugging Face
 │   ├── digital_devices_reviews_no_duplicates.csv   # Post-Step-2 deduplicated data
 │   ├── eda_ready.csv                # Post-Step-3 feature-engineered data
-│   └── final.csv
+|   ├── final_nonlabel.csv           # unlabeled data
+│   └── final.csv                    # labeled data
 │
 ├── models/                          # Supplementary model utilities used by Dash app
 │   ├── data_processing.py           
