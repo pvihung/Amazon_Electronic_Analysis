@@ -154,9 +154,9 @@ Amazon_Electronic_Analysis/
 │   ├── link_reviews_products.sql     # Joins reviews with product metadata
 │   └── duplicate_and_null_handling.sql
 │
-├── models/            # Supplementary model utilities and training helpers
-│   ├── augmentation.py          # Data augmentation strategies for ABSA training data
-│   └── data_processing.py       # Preprocessing and dataset preparation for model training
+├── models/            # Supplementary model utilities and training helpers (used by Dash app)
+│   ├── augmentation.py          
+│   └── data_processing.py       
 │
 ├── notebooks/         # Jupyter notebooks for model development, training, and analysis
 │   ├── absa_pipeline_vfinal.ipynb          # Full end-to-end ABSA training pipeline (canonical version)
